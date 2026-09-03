@@ -1,1 +1,4 @@
-# helper to keep controller slim — but we inline logic in controller for now
+module StudentImportable
+  extend ActiveSupport::Concern
+  # placeholder - import logic lives in StudentsController
+end
