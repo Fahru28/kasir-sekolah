@@ -81,8 +81,12 @@ group :test do
   gem "shoulda-matchers", "~> 6.0"
 end
 
-# gem "llama_bot_rails", "~> 0.1.16"  # published gem
-gem "llama_bot_rails", path: "vendor/llama_bot_rails"
+# llama_bot_rails: pakai local path kalau submodule ada, fallback ke github kalau build di Railway/host tanpa submodule
+if File.exist?("vendor/llama_bot_rails/llama_bot_rails.gemspec")
+  gem "llama_bot_rails", path: "vendor/llama_bot_rails"
+else
+  gem "llama_bot_rails", github: "KodyKendall/llama_bot_rails"
+end
 
 gem "devise", "~> 4.9"
 
