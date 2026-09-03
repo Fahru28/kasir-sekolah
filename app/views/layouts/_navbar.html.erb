@@ -1,8 +1,8 @@
 <div class="navbar bg-base-100 shadow-sm sticky top-0 z-40">
-  <div class="navbar-start">
+  <div class="navbar-start min-w-0 flex-1 gap-0">
     <% if user_signed_in? %>
-      <div class="dropdown">
-        <div tabindex="0" role="button" class="btn btn-ghost btn-circle lg:hidden"><i class="fa-solid fa-bars"></i></div>
+      <div class="dropdown shrink-0">
+        <div tabindex="0" role="button" class="btn btn-ghost btn-circle btn-sm"><i class="fa-solid fa-bars"></i></div>
         <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[50] p-2 shadow bg-base-100 rounded-box w-56 border">
           <li><a href="/kasir"><i class="fa-solid fa-cash-register"></i> Kasir</a></li>
           <li><a href="/pesan"><i class="fa-solid fa-bag-shopping"></i> Pesan</a></li>
@@ -16,15 +16,15 @@
         </ul>
       </div>
     <% end %>
-    <a href="/" class="btn btn-ghost gap-2">
-      <span class="w-8 h-8 bg-white rounded-lg overflow-hidden flex items-center justify-center p-0.5 border border-emerald-200"><%= image_tag "images.png", alt: "SIT", class: "w-full h-full object-contain" %></span>
-      <span class="flex flex-col items-start leading-none">
-        <span class="text-sm font-black tracking-tight">SIT INSANTAMA</span>
-        <span class="text-[11px] opacity-60 font-semibold">Unit Layanan Pendidikan</span>
+    <a href="/" class="btn btn-ghost gap-2 min-w-0 justify-start px-1.5 sm:px-3 h-auto min-h-0 py-2 sm:py-1">
+      <span class="w-8 h-8 bg-white rounded-lg overflow-hidden flex items-center justify-center p-0.5 border border-emerald-200 shrink-0"><%= image_tag "images.png", alt: "SIT", class: "w-full h-full object-contain" %></span>
+      <span class="flex flex-col items-start leading-tight min-w-0 text-left">
+        <span class="font-black tracking-tight text-[11px] sm:text-sm leading-none">SIT INSANTAMA<br class="sm:hidden"> RANGKASBITUNG</span>
+        <span class="text-[10px] sm:text-[11px] opacity-60 font-semibold leading-none mt-0.5">Unit Layanan Pendidikan</span>
       </span>
     </a>
   </div>
-  <div class="navbar-center hidden lg:flex">
+  <div class="navbar-center hidden">
     <ul class="menu menu-horizontal px-1 gap-1">
       <li><a href="/kasir" class="<%= 'active' if request.path.start_with?('/kasir') %>"><i class="fa-solid fa-cash-register"></i> Kasir</a></li>
       <li><a href="/pesan"><i class="fa-solid fa-bag-shopping"></i> Pesan</a></li>
@@ -36,10 +36,10 @@
       <li><a href="/laporan" class="<%= 'active' if request.path.start_with?('/laporan') %>"><i class="fa-solid fa-chart-column"></i> Laporan</a></li>
     </ul>
   </div>
-  <div class="navbar-end gap-1">
+  <div class="navbar-end gap-1 shrink-0">
     <% if user_signed_in? %>
-      <span class="hidden sm:inline text-xs opacity-60 mr-1"><%= current_user.email %></span>
-      <%= button_to destroy_user_session_path, method: :delete, class: "btn btn-ghost btn-sm gap-1" do %><i class="fa-solid fa-right-from-bracket"></i> Keluar<% end %>
+      <span class="hidden lg:inline text-xs opacity-60 mr-1 truncate max-w-[160px]"><%= current_user.email %></span>
+      <%= button_to destroy_user_session_path, method: :delete, class: "btn btn-ghost btn-sm gap-1 shrink-0 px-2 sm:px-3" do %><i class="fa-solid fa-right-from-bracket"></i><span class="hidden sm:inline">Keluar</span><% end %>
     <% end %>
   </div>
 </div>
