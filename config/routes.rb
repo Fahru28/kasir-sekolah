@@ -52,6 +52,8 @@ Rails.application.routes.draw do
   post "kasir/remove_item", to: "kasir#remove_item"
   post "kasir/clear_cart", to: "kasir#clear_cart"
   post "kasir/checkout", to: "kasir#checkout"
+  post "kasir/load_order/:id", to: "kasir#load_order", as: :kasir_load_order
+  post "kasir/cancel_loaded_order", to: "kasir#cancel_loaded_order"
   resources :students do
     collection do
       get :import_form

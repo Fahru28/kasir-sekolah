@@ -2,10 +2,42 @@
   <div class="flex flex-wrap justify-between items-center gap-3 mb-6">
     <div>
       <h1 class="text-2xl font-bold flex items-center gap-2"><span class="w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-white"><i class="fa-solid fa-cash-register text-sm"></i></span> Kasir</h1>
-      <p class="text-sm opacity-60 mt-1">Pilih siswa → tambah barang → bayar. No: <span class="font-mono font-semibold"><%= "TRX-#{Date.current.strftime('%Y%m%d')}-XXX" %></span></p>
+      <p class="text-sm opacity-60 mt-1">Pilih siswa → tambah barang → bayar. No: <span class="font-mono font-semibold"><%= "TRX-#{Date.current.strftime('%Y%m%d')}-XXX" %></span> · SIT Insantama Rangkasbitung</p>
     </div>
     <a href="/dashboard" class="btn btn-sm btn-ghost gap-1"><i class="fa-solid fa-arrow-left"></i> Dashboard</a>
   </div>
+
+  <% if session[:kasir_order_id].present? %>
+    <% loaded = Order.find_by(id: session[:kasir_order_id]) %>
+    <div class="alert bg-amber-50 border border-amber-200 text-amber-900 mb-4 flex justify-between">
+      <span><i class="fa-solid fa-bag-shopping mr-1"></i> Memproses <b>Pesanan #<%= loaded&.id %> — <%= loaded&.customer_name %></b> (<%= loaded&.customer_class %>) — selesaikan pembayaran, pesanan otomatis jadi Selesai & masuk Riwayat</span>
+      <%= button_to kasir_cancel_loaded_order_path, method: :post, class: "btn btn-ghost btn-xs" do %>Batal muat<% end %>
+    </div>
+  <% end %>
+
+  <% if @pending_orders.any? %>
+    <div class="card bg-amber-50 border border-amber-200 shadow-sm mb-6">
+      <div class="card-body p-4">
+        <h2 class="font-bold flex items-center gap-2 text-amber-900"><i class="fa-solid fa-inbox"></i> Pesanan Masuk (<%= @pending_orders.size %>) — klik Muat untuk proses di Kasir</h2>
+        <div class="grid gap-2 mt-3">
+          <% @pending_orders.each do |o| %>
+            <div class="bg-white rounded-xl border p-3 flex flex-wrap justify-between gap-3 items-center">
+              <div class="min-w-0 flex-1">
+                <p class="font-bold text-sm">#<%= o.id %> · <%= o.customer_name %> · <%= o.customer_class %> · <%= o.customer_phone %> <span class="badge badge-sm <%= o.status == 'Menunggu' ? 'badge-warning' : 'badge-info' %> ml-1"><%= o.status_label %></span></p>
+                <div class="flex flex-wrap gap-1 mt-1">
+                  <% o.order_items.each do |oi| %>
+                    <span class="badge badge-ghost badge-sm"><%= oi.product.name %> × <%= oi.quantity %></span>
+                  <% end %>
+                </div>
+                <p class="text-sm font-bold text-primary mt-1"><%= rupiah(o.total_amount) %></p>
+              </div>
+              <%= button_to kasir_load_order_path(o), method: :post, class: "btn btn-sm btn-primary gap-1 shrink-0" do %><i class="fa-solid fa-download"></i> Muat ke Kasir<% end %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  <% end %>
 
   <% if flash[:alert] %>
     <div class="alert alert-error mb-4"><i class="fa-solid fa-circle-exclamation"></i> <%= flash[:alert] %></div>

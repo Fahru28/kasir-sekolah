@@ -1,6 +1,5 @@
 <div class="min-h-screen bg-gradient-to-b from-amber-50 to-white flex flex-col items-center px-4 py-8">
-  <!-- Struk yang akan di-download sebagai GAMBAR (html2canvas sudah ada di layout) -->
-  <div id="struk-pesanan" class="card bg-white shadow-xl border border-amber-100 rounded-2xl max-w-lg w-full overflow-hidden">
+  <div class="card bg-white shadow-xl border border-amber-100 rounded-2xl max-w-lg w-full overflow-hidden">
     <div class="h-2 bg-gradient-to-r from-emerald-600 to-teal-600"></div>
     <div class="card-body">
       <div class="text-center">
@@ -31,30 +30,8 @@
     </div>
   </div>
 
-  <!-- Tombol: Download sebagai GAMBAR -->
-  <div class="max-w-lg w-full mt-4 space-y-2">
-    <button id="btn-download-gambar" class="btn btn-success w-full gap-2"><i class="fa-solid fa-image"></i> Download sebagai Gambar</button>
-    <a href="<%= pesan_download_path(@order) %>" class="btn btn-ghost btn-sm w-full gap-1"><i class="fa-solid fa-file-excel"></i> Download Excel juga</a>
-    <div class="flex gap-2">
-      <a href="/pesan" class="btn flex-1 btn-outline rounded-xl">Pesan lagi</a>
-      <a href="/" class="btn flex-1 btn-ghost rounded-xl">Ke Dashboard</a>
-    </div>
+  <div class="max-w-lg w-full mt-4 flex gap-2">
+    <a href="/pesan" class="btn flex-1 btn-outline rounded-xl">Pesan lagi</a>
+    <a href="/" class="btn flex-1 btn-ghost rounded-xl">Ke Dashboard</a>
   </div>
 </div>
-
-<script>
-document.getElementById('btn-download-gambar')?.addEventListener('click', async () => {
-  const el = document.getElementById('struk-pesanan');
-  if (!el || !window.html2canvas) { alert('Gagal download gambar'); return; }
-  const btn = document.getElementById('btn-download-gambar');
-  btn.disabled = true; btn.innerHTML = '<span class="loading loading-spinner loading-xs"></span> Membuat gambar...';
-  try {
-    const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
-    const a = document.createElement('a');
-    a.download = 'pesanan-<%= @order.id %>-<%= @order.customer_name.parameterize %>.png';
-    a.href = canvas.toDataURL('image/png');
-    a.click();
-  } catch(e) { alert('Gagal: ' + e.message); }
-  btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-image"></i> Download sebagai Gambar';
-});
-</script>

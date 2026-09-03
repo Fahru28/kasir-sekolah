@@ -3,6 +3,22 @@ class KasirController < ApplicationController
     @students = Student.order(:name)
     @products = Product.order(:name)
     @cart = session[:kasir_cart] || []
+    @pending_orders = Order.includes(order_items: :product).where(status: %w[Menunggu Siap_Diambil]).order(created_at: :desc)
+  end
+
+  def load_order
+    order = Order.includes(order_items: :product).find(params[:id])
+    session[:kasir_cart] = order.order_items.map do |oi|
+      { "product_id" => oi.product_id, "code" => oi.product.code, "name" => oi.product.name, "price" => oi.price, "cost" => oi.product.cost_price, "qty" => oi.quantity }
+    end
+    # simpan order_id biar saat checkout bisa tandai selesai
+    session[:kasir_order_id] = order.id
+    redirect_to kasir_path, notice: "Pesanan ##{order.id} (#{order.customer_name}) dimuat ke keranjang — pilih siswa & bayar"
+  end
+
+  def cancel_loaded_order
+    session.delete(:kasir_order_id)
+    redirect_to kasir_path
   end
 
   def add_item
@@ -71,6 +87,12 @@ class KasirController < ApplicationController
         subtotal: i["price"].to_i * i["qty"].to_i,
         profit: (i["price"].to_i - i["cost"].to_i) * i["qty"].to_i
       )
+    end
+    # kalau keranjang berasal dari pesanan online, tandai pesanan jadi Selesai
+    if session[:kasir_order_id].present?
+      Order.find_by(id: session.delete(:kasir_order_id))&.update(status: "Selesai", sale: sale, total_amount: total)
+    else
+      session.delete(:kasir_order_id)
     end
     session[:kasir_cart] = []
     redirect_to sale_path(sale), notice: "Transaksi #{sale.number} berhasil!"
