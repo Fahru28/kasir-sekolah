@@ -25,7 +25,7 @@ fi
 # background behind the booted server. Files created AFTER a dir has its default
 # (d:) ACL inherit it at creation, so the background pass only matters for files
 # that predate the ACL. See docs/dev/root-owned-tmp-cache-rca.md.
-mkdir -p /rails/coverage || true
+mkdir -p /rails/coverage 2>/dev/null || true
 ACL_ENTRIES="-m u:1000:rwX -m d:u:1000:rwX"
 if setfacl $ACL_ENTRIES /rails 2>/dev/null; then
   # Fast blocking pass: the paths customer test runs hit (SI#134/SI#154).

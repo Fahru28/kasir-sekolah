@@ -37,10 +37,11 @@ FROM base
 COPY --from=build /usr/local/bundle /usr/local/bundle
 COPY --from=build /rails /rails
 
-RUN groupadd --system --gid 1000 rails && \
+RUN mkdir -p /rails/coverage /rails/tmp /rails/log /rails/storage && \
+    groupadd --system --gid 1000 rails && \
     useradd rails --uid 1000 --gid 1000 --create-home --shell /bin/bash && \
     chown -R rails:rails /rails/db /rails/log /rails/storage /rails/tmp 2>/dev/null || true
 
 USER 1000:1000
 EXPOSE 3000
-CMD ["./bin/docker-entrypoint"]
+CMD ["./bin/docker-entrypoint", "./bin/rails", "server", "-b", "0.0.0.0"]
