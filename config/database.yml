@@ -80,6 +80,4 @@ test:
 #
 production:
   <<: *default
-  database: llamapress_production
-  username: postgres
-  password: <%= ENV["POSTGRES_PASSWORD"] %>
+  url: <%= ENV["DATABASE_URL"] %>
