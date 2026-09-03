@@ -1,5 +1,21 @@
 <div class="navbar bg-base-100 shadow-sm sticky top-0 z-40">
   <div class="navbar-start">
+    <% if user_signed_in? %>
+      <div class="dropdown">
+        <div tabindex="0" role="button" class="btn btn-ghost btn-circle lg:hidden"><i class="fa-solid fa-bars"></i></div>
+        <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[50] p-2 shadow bg-base-100 rounded-box w-56 border">
+          <li><a href="/kasir"><i class="fa-solid fa-cash-register"></i> Kasir</a></li>
+          <li><a href="/pesan"><i class="fa-solid fa-bag-shopping"></i> Pesan</a></li>
+          <li><a href="/orders"><i class="fa-solid fa-clipboard-list"></i> Pesanan</a></li>
+          <li><a href="/sales"><i class="fa-solid fa-receipt"></i> Penjualan</a></li>
+          <li><a href="/piutang"><i class="fa-solid fa-hand-holding-dollar"></i> Piutang</a></li>
+          <li><a href="/products"><i class="fa-solid fa-box"></i> Barang</a></li>
+          <li><a href="/students"><i class="fa-solid fa-children"></i> Siswa</a></li>
+          <li><a href="/laporan"><i class="fa-solid fa-chart-column"></i> Laporan</a></li>
+          <li class="mt-1 pt-2 border-t"><a href="/"><i class="fa-solid fa-gauge"></i> Dashboard</a></li>
+        </ul>
+      </div>
+    <% end %>
     <a href="/" class="btn btn-ghost gap-2">
       <span class="w-8 h-8 bg-white rounded-lg overflow-hidden flex items-center justify-center p-0.5 border border-emerald-200"><%= image_tag "images.png", alt: "SIT", class: "w-full h-full object-contain" %></span>
       <span class="flex flex-col items-start leading-none">
