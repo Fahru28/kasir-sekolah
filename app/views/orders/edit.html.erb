@@ -1,0 +1,15 @@
+<% content_for :title, "Editing order" %>
+
+<%= llama_record_frame do %>
+  <div class="mx-auto max-w-xl">
+    <h2 class="mb-4 text-lg font-semibold text-gray-900">Editing order</h2>
+
+    <%= render "form", order: @order %>
+
+    <p class="mt-4">
+      <%= link_to "Back to orders", orders_path,
+            data: { turbo_frame: "_top" },
+            class: "text-sm text-gray-500 hover:text-gray-800 hover:underline" %>
+    </p>
+  </div>
+<% end %>

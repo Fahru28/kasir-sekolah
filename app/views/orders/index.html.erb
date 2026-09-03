@@ -1,0 +1,109 @@
+<% content_for :title, "Orders" %>
+<% filters_active = params.values_at(:from, :to).any?(&:present?) %>
+
+<div class="w-full" data-controller="filter-panel">
+  <section class="mb-6 rounded-lg bg-gradient-to-r from-gray-800 to-gray-900 px-6 py-8 shadow">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <h1 class="text-3xl font-bold tracking-tight text-white">Orders</h1>
+        <p class="mt-1 text-sm text-gray-300">View your orders</p>
+      </div>
+      <%= link_to "New order", new_order_path,
+            data: { turbo_frame: "record_drawer" },
+            class: "rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow hover:bg-gray-100" %>
+    </div>
+  </section>
+
+  <% if notice.present? %>
+    <div class="mb-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800" role="status">
+      <%= notice %>
+    </div>
+  <% end %>
+
+  <%# One form around both the search bar and the filter panel, so applying
+      either preserves the other instead of dropping it from the query. %>
+  <%= form_with url: orders_path, method: :get, data: { turbo_frame: "_top" } do |form| %>
+    <div class="relative mb-4">
+      <%= form.label :q, "Search", class: "sr-only" %>
+      <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
+        </svg>
+      </span>
+      <%= form.search_field :q, value: params[:q],
+            placeholder: "Search orders by status, customer name, customer class, customer phone",
+            class: "block w-full rounded-lg border border-gray-300 py-3 pl-11 pr-4 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500" %>
+    </div>
+
+    <div class="mb-6 rounded-lg border border-gray-200 bg-white shadow">
+      <div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+        <button type="button"
+                data-action="filter-panel#toggle"
+                aria-expanded="<%= filters_active %>"
+                class="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900">
+          <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6h16.5M6 12h12M10.5 18h3" />
+          </svg>
+          Filters
+          <svg class="llama-filter-chevron <%= "llama-filter-chevron-open" if filters_active %> h-4 w-4 text-gray-400"
+               fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        <div class="flex items-center gap-2">
+          <%= form.submit "Apply", class: "rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700" %>
+          <%= link_to "Reset", orders_path, class: "px-2 py-2 text-sm text-gray-500 hover:text-gray-800 hover:underline" %>
+        </div>
+      </div>
+
+      <div data-filter-panel-target="panel"
+           class="<%= "hidden" unless filters_active %> border-t border-gray-200 px-4 py-4">
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <%= form.label :from, "Created from", class: "block text-xs font-medium text-gray-700 mb-1" %>
+            <%= form.date_field :from, value: params[:from],
+                  class: "block w-full rounded-md border border-gray-300 px-3 py-2 text-sm" %>
+          </div>
+          <div>
+            <%= form.label :to, "Created to", class: "block text-xs font-medium text-gray-700 mb-1" %>
+            <%= form.date_field :to, value: params[:to],
+                  class: "block w-full rounded-md border border-gray-300 px-3 py-2 text-sm" %>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <% if @orders.any? %>
+    <%# "relative" keeps the absolutely-positioned sr-only header label contained; without it the label escapes the scroll container and forces page-wide horizontal scroll. %>
+    <div class="relative overflow-x-auto rounded-lg bg-white shadow">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Status</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Customer name</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hidden md:table-cell">Customer class</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hidden md:table-cell">Customer phone</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hidden md:table-cell">Total amount</th>
+            <th scope="col" class="px-4 py-3"><span class="sr-only">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody id="orders" class="divide-y divide-gray-200 bg-white">
+          <%= render @orders %>
+        </tbody>
+      </table>
+    </div>
+
+    <%= llama_pagination_nav(@pagy) %>
+  <% else %>
+    <div class="rounded-lg bg-white px-6 py-16 text-center shadow">
+      <p class="text-sm text-gray-500">No orders found.</p>
+      <p class="mt-3">
+        <%= link_to "New order", new_order_path,
+              data: { turbo_frame: "record_drawer" },
+              class: "text-sm font-medium text-blue-600 hover:underline" %>
+      </p>
+    </div>
+  <% end %>
+</div>

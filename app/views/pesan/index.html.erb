@@ -1,0 +1,111 @@
+<div class="bg-gradient-to-br from-primary to-indigo-600 text-white">
+  <div class="max-w-6xl mx-auto px-6 py-6">
+    <div class="flex justify-between items-center">
+      <div>
+        <p class="text-white/70 text-sm"><i class="fa-solid fa-bag-shopping mr-1"></i> Koperasi SIT Insan Tama</p>
+        <h1 class="text-2xl font-bold">Pesan Barang Online</h1>
+        <p class="text-white/70 text-sm mt-1">Pilih barang, masuk keranjang, checkout — ambil di koperasi</p>
+      </div>
+      <a href="/" class="btn btn-sm btn-ghost text-white border-white/30">← Dashboard</a>
+    </div>
+  </div>
+</div>
+
+<div class="max-w-6xl mx-auto px-6 py-6">
+  <% if notice %><div class="alert alert-success mb-4"><span><%= notice %></span></div><% end %>
+  <% if alert %><div class="alert alert-warning mb-4"><span><%= alert %></span></div><% end %>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Katalog -->
+    <div class="lg:col-span-2">
+      <h2 class="font-bold text-lg mb-3"><i class="fa-solid fa-store mr-2 text-primary"></i>Katalog Barang</h2>
+      <% if @products.empty? %>
+        <div class="alert">Belum ada barang</div>
+      <% else %>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <% @products.each do |p| %>
+            <div class="card bg-base-100 shadow border border-base-200 hover:shadow-lg transition">
+              <div class="card-body p-4">
+                <div class="flex justify-between items-start gap-2">
+                  <div>
+                    <p class="font-semibold text-sm"><%= p.name %></p>
+                    <p class="text-xs opacity-60"><%= p.code %> · <%= p.category %> · <%= p.unit %></p>
+                    <p class="text-xs mt-1">Stok: <span class="<%= p.current_stock <= p.min_stock.to_i ? 'text-error font-bold' : 'text-success' %>"><%= p.current_stock %></span> / min <%= p.min_stock %></p>
+                  </div>
+                  <span class="badge badge-primary badge-sm"><%= rupiah(p.selling_price) %></span>
+                </div>
+                <%= form_with url: pesan_add_path, method: :post, class: "flex gap-2 mt-3" do |f| %>
+                  <%= f.hidden_field :product_id, value: p.id %>
+                  <div class="join flex-1">
+                    <%= f.number_field :quantity, value: 1, min: 1, max: 99, class: "input input-sm input-bordered join-item w-full" %>
+                    <button class="btn btn-sm btn-primary join-item gap-1"><i class="fa-solid fa-cart-plus"></i> Tambah</button>
+                  </div>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+
+    <!-- Keranjang -->
+    <div>
+      <div class="card bg-base-100 shadow-xl border border-base-200 sticky top-4">
+        <div class="card-body">
+          <h2 class="font-bold flex justify-between items-center">
+            <span><i class="fa-solid fa-cart-shopping mr-2 text-primary"></i>Keranjang</span>
+            <span class="badge badge-neutral"><%= @cart_items.sum { |i| i[:quantity] } %> item</span>
+          </h2>
+
+          <% if @cart_items.empty? %>
+            <div class="text-center py-8 opacity-60">
+              <div class="w-12 h-12 rounded-full bg-base-200 flex items-center justify-center mx-auto mb-2"><i class="fa-solid fa-basket-shopping"></i></div>
+              <p class="text-sm">Keranjang kosong</p>
+              <p class="text-xs">Pilih barang di kiri</p>
+            </div>
+          <% else %>
+            <div class="space-y-2 mt-3">
+              <% @cart_items.each do |ci| %>
+                <div class="flex justify-between items-center p-2 rounded-lg bg-base-200/60">
+                  <div class="min-w-0 flex-1">
+                    <p class="text-sm font-medium truncate"><%= ci[:product].name %></p>
+                    <p class="text-xs opacity-60"><%= rupiah(ci[:product].selling_price) %> × <%= ci[:quantity] %></p>
+                  </div>
+                  <div class="flex items-center gap-1 ml-2">
+                    <%= form_with url: pesan_update_qty_path, method: :post, class: "flex items-center gap-1" do |f| %>
+                      <%= f.hidden_field :product_id, value: ci[:product].id %>
+                      <%= f.number_field :quantity, value: ci[:quantity], min: 0, max: 99, class: "input input-xs input-bordered w-12 text-center", onchange: "this.form.requestSubmit()" %>
+                    <% end %>
+                    <%= button_to pesan_remove_path(product_id: ci[:product].id), method: :post, class: "btn btn-xs btn-ghost text-error" do %><i class="fa-solid fa-xmark"></i><% end %>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+
+            <div class="divider my-3"></div>
+            <div class="flex justify-between font-bold text-lg">
+              <span>Total</span>
+              <span class="text-primary"><%= rupiah(@total) %></span>
+            </div>
+
+            <%= form_with url: pesan_clear_path, method: :post, class: "mt-2" do %>
+              <button class="btn btn-xs btn-ghost w-full">Kosongkan</button>
+            <% end %>
+
+            <div class="divider my-3">Checkout</div>
+            <%= form_with url: pesan_checkout_path, method: :post, class: "space-y-2" do |f| %>
+              <%= f.text_field :customer_name, placeholder: "Nama siswa/wali *", required: true, class: "input input-bordered input-sm w-full" %>
+              <div class="grid grid-cols-2 gap-2">
+                <%= f.text_field :customer_class, placeholder: "Kelas (1A)", class: "input input-bordered input-sm w-full" %>
+                <%= f.text_field :customer_phone, placeholder: "WA 0812...", class: "input input-bordered input-sm w-full" %>
+              </div>
+              <%= f.text_area :note, placeholder: "Catatan (opsional)", rows: 2, class: "textarea textarea-bordered textarea-sm w-full" %>
+              <button class="btn btn-primary w-full gap-2"><i class="fa-solid fa-paper-plane"></i> Pesan Sekarang — <%= rupiah(@total) %></button>
+              <p class="text-xs opacity-50 text-center">Bayar saat ambil di koperasi</p>
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

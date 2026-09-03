@@ -1,0 +1,34 @@
+<div class="min-h-[60vh] flex items-center justify-center px-6 py-12">
+  <div class="card bg-base-100 shadow-xl border border-base-200 max-w-lg w-full">
+    <div class="card-body text-center">
+      <div class="w-16 h-16 rounded-full bg-success/15 flex items-center justify-center mx-auto text-success text-2xl mb-3"><i class="fa-solid fa-check"></i></div>
+      <h1 class="text-2xl font-bold">Pesanan Diterima!</h1>
+      <p class="opacity-60 text-sm mt-1">Terima kasih, <b><%= @order.customer_name %></b> — silakan ambil di koperasi</p>
+
+      <div class="bg-base-200/60 rounded-xl p-4 text-left mt-4">
+        <p class="text-xs opacity-60">No. Pesanan</p>
+        <p class="font-mono font-bold">#<%= @order.id %> · <%= @order.created_at.strftime("%d %b %Y %H:%M") %></p>
+        <p class="text-sm mt-2"><b><%= @order.customer_name %></b><% if @order.customer_class.present? %> · Kelas <%= @order.customer_class %><% end %> <% if @order.customer_phone.present? %>· <%= @order.customer_phone %><% end %></p>
+        <% if @order.note.present? %><p class="text-sm opacity-70 mt-1">Catatan: <%= @order.note %></p><% end %>
+        <div class="divider my-2"></div>
+        <div class="space-y-1">
+          <% @order.order_items.includes(:product).each do |oi| %>
+            <div class="flex justify-between text-sm">
+              <span><%= oi.product.name %> × <%= oi.quantity %></span>
+              <span class="font-medium"><%= rupiah(oi.subtotal) %></span>
+            </div>
+          <% end %>
+        </div>
+        <div class="flex justify-between font-bold mt-3 pt-3 border-t">
+          <span>Total</span><span class="text-primary"><%= rupiah(@order.total_amount) %></span>
+        </div>
+        <p class="mt-2"><span class="badge <%= @order.status == 'Menunggu' ? 'badge-warning' : 'badge-success' %>"><%= @order.status_label %></span> <span class="text-xs opacity-60">· Bayar saat ambil</span></p>
+      </div>
+
+      <div class="flex gap-2 mt-6">
+        <a href="/pesan" class="btn btn-outline flex-1">Pesan lagi</a>
+        <a href="/" class="btn btn-ghost flex-1">Ke Dashboard</a>
+      </div>
+    </div>
+  </div>
+</div>

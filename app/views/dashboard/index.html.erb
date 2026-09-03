@@ -97,7 +97,45 @@
       </div>
     </div>
 
-    <div>
+    <div class="space-y-6">
+      <!-- Pesanan Masuk (opsi B) -->
+      <div class="card bg-base-100 shadow border <%= @pending_count > 0 ? 'border-warning' : 'border-base-200' %>">
+        <div class="card-body">
+          <div class="flex justify-between items-center mb-3">
+            <h2 class="font-bold"><i class="fa-solid fa-bell mr-2 text-warning"></i>Pesanan Masuk</h2>
+            <% if @pending_count > 0 %><span class="badge badge-warning badge-sm animate-pulse"><%= @pending_count %> baru</span><% end %>
+          </div>
+          <% if @pending_orders.any? %>
+            <div class="space-y-2">
+              <% @pending_orders.each do |o| %>
+                <div class="p-3 rounded-xl bg-warning/10 border border-warning/20">
+                  <div class="flex justify-between items-start gap-2">
+                    <div class="min-w-0">
+                      <p class="font-medium text-sm truncate">#<%= o.id %> · <%= o.customer_name %> <% if o.customer_class.present? %><span class="opacity-60">(<%= o.customer_class %>)</span><% end %></p>
+                      <p class="text-xs opacity-60"><%= o.order_items.map { |oi| "#{oi.product.name}×#{oi.quantity}" }.join(", ") %></p>
+                      <p class="text-xs font-semibold mt-1"><%= rupiah(o.total_amount) %> · <%= o.created_at.strftime("%H:%M") %></p>
+                    </div>
+                    <div class="flex flex-col gap-1 shrink-0">
+                      <%= button_to "Siap", update_status_order_path(o, status: "Siap_Diambil"), method: :patch, class: "btn btn-xs btn-success" %>
+                      <%= button_to "Batal", update_status_order_path(o, status: "Dibatalkan"), method: :patch, class: "btn btn-xs btn-ghost" %>
+                    </div>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          <% else %>
+            <div class="text-center py-6 opacity-60">
+              <div class="w-10 h-10 rounded-full bg-base-200 flex items-center justify-center mx-auto mb-2"><i class="fa-solid fa-inbox"></i></div>
+              <p class="text-sm">Belum ada pesanan baru</p>
+            </div>
+          <% end %>
+          <div class="flex gap-2 mt-4">
+            <a href="/orders" class="btn btn-sm btn-outline flex-1">Kelola pesanan</a>
+            <a href="/pesan" target="_blank" class="btn btn-sm btn-primary flex-1 gap-1"><i class="fa-solid fa-up-right-from-square"></i> Halaman Pesan</a>
+          </div>
+        </div>
+      </div>
+
       <div class="card bg-base-100 shadow border border-base-200">
         <div class="card-body">
           <h2 class="font-bold mb-3"><i class="fa-solid fa-boxes-stacked mr-2 text-primary"></i>Stok Menipis</h2>

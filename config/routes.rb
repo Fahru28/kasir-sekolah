@@ -1,4 +1,19 @@
 Rails.application.routes.draw do
+  # Pemesanan publik (opsi B: pesan dari HP)
+  get  "pesan", to: "pesan#index", as: :pesan
+  post "pesan/add", to: "pesan#add", as: :pesan_add
+  post "pesan/update_qty", to: "pesan#update_qty", as: :pesan_update_qty
+  post "pesan/remove", to: "pesan#remove", as: :pesan_remove
+  post "pesan/clear", to: "pesan#clear", as: :pesan_clear
+  post "pesan/checkout", to: "pesan#checkout", as: :pesan_checkout
+  get  "pesan/sukses/:id", to: "pesan#sukses", as: :pesan_sukses
+
+  # Manajemen pesanan (kasir/admin, perlu login)
+  resources :orders do
+    member do
+      patch :update_status
+    end
+  end
   devise_for :users, controllers: { registrations: 'users/registrations' }
   resources :users do
     member do

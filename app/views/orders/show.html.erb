@@ -1,0 +1,51 @@
+<% content_for :title, "Order" %>
+
+<%# Renders inside the shared record drawer when fetched through the
+    "record_drawer" Turbo Frame, and as a normal full page on direct visits. %>
+<%= llama_record_frame do %>
+  <div class="mx-auto max-w-xl">
+    <h2 class="mb-4 text-lg font-semibold text-gray-900">Order details</h2>
+
+    <dl class="space-y-4">
+      <div>
+        <dt class="text-xs font-medium uppercase tracking-wider text-gray-500">Customer name</dt>
+        <dd class="mt-1 text-sm text-gray-900"><%= @order.customer_name %></dd>
+      </div>
+      <div>
+        <dt class="text-xs font-medium uppercase tracking-wider text-gray-500">Customer class</dt>
+        <dd class="mt-1 text-sm text-gray-900"><%= @order.customer_class %></dd>
+      </div>
+      <div>
+        <dt class="text-xs font-medium uppercase tracking-wider text-gray-500">Customer phone</dt>
+        <dd class="mt-1 text-sm text-gray-900"><%= @order.customer_phone %></dd>
+      </div>
+      <div>
+        <dt class="text-xs font-medium uppercase tracking-wider text-gray-500">Note</dt>
+        <dd class="mt-1 whitespace-pre-wrap text-sm text-gray-900"><%= @order.note %></dd>
+      </div>
+      <div>
+        <dt class="text-xs font-medium uppercase tracking-wider text-gray-500">Status</dt>
+        <dd class="mt-1 text-sm text-gray-900"><%= @order.status %></dd>
+      </div>
+      <div>
+        <dt class="text-xs font-medium uppercase tracking-wider text-gray-500">Total amount</dt>
+        <dd class="mt-1 text-sm text-gray-900"><%= @order.total_amount %></dd>
+      </div>
+      <div>
+        <dt class="text-xs font-medium uppercase tracking-wider text-gray-500">Created</dt>
+        <dd class="mt-1 text-sm text-gray-900"><%= @order.created_at&.strftime("%b %-d, %Y %H:%M") %></dd>
+      </div>
+    </dl>
+
+    <div class="mt-6 flex items-center gap-3 border-t border-gray-100 pt-4">
+      <%= link_to "Edit", edit_order_path(@order),
+            class: "rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-500" %>
+      <%= button_to "Delete", @order, method: :delete,
+            form: { data: { turbo_frame: "_top", turbo_confirm: "Delete this order?" } },
+            class: "rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50" %>
+      <%= link_to "All orders", orders_path,
+            data: { turbo_frame: "_top" },
+            class: "px-2 py-2 text-sm text-gray-500 hover:text-gray-800 hover:underline" %>
+    </div>
+  </div>
+<% end %>

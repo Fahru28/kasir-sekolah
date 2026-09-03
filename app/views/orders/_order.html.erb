@@ -1,0 +1,16 @@
+<tr id="<%= dom_id order %>" data-drawer-row class="hover:bg-gray-50">
+  <td class="px-4 py-3 text-sm font-medium text-gray-900">
+    <%= link_to (order.status).presence || "Order ##{order.id}", order,
+          data: { turbo_frame: "record_drawer" },
+          class: "text-blue-600 hover:underline" %>
+  </td>
+  <td class="px-4 py-3 text-sm text-gray-600"><%= order.customer_name %></td>
+  <td class="px-4 py-3 text-sm text-gray-600 hidden md:table-cell"><%= order.customer_class %></td>
+  <td class="px-4 py-3 text-sm text-gray-600 hidden md:table-cell"><%= order.customer_phone %></td>
+  <td class="px-4 py-3 text-sm text-gray-600 hidden md:table-cell"><%= order.total_amount %></td>
+  <td class="px-4 py-3 text-right text-sm">
+    <%= link_to "Edit", edit_order_path(order),
+          data: { turbo_frame: "record_drawer" },
+          class: "text-blue-600 hover:underline" %>
+  </td>
+</tr>
