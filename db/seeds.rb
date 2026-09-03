@@ -8,6 +8,11 @@ User.find_or_create_by!(email: 'kody@llamapress.ai') do |user|
   user.password_confirmation = '123456'
 end
 
+User.find_or_create_by!(email: 'admin@sitin.s.sch.id') do |user|
+  user.password = 'insantama123'
+  user.password_confirmation = 'insantama123'
+end
+
 load Rails.root.join('db/seeds/canteen.rb')
 
 # Example:
