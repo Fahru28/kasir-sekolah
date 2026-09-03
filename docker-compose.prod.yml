@@ -1,0 +1,40 @@
+# Production compose — tinggal pakai di VPS
+# Cara pakai: docker compose -f docker-compose.prod.yml up -d --build
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - RAILS_ENV=production
+      - DATABASE_URL=postgres://kasir:kasir_secret@db:5432/kasir_production
+      - REDIS_URL=redis://redis:6379/1
+    command: bash -c "rm -f tmp/pids/server.pid && bundle exec rails db:prepare && bundle exec rails s -b 0.0.0.0 -p 3000"
+    depends_on:
+      - db
+      - redis
+    restart: unless-stopped
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: kasir_production
+      POSTGRES_USER: kasir
+      POSTGRES_PASSWORD: kasir_secret
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redisdata:/data
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
