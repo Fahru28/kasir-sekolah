@@ -107,7 +107,7 @@ class PesanController < ApplicationController
       package = Axlsx::Package.new
       wb = package.workbook
       wb.add_worksheet(name: "Pesanan") do |sheet|
-        sheet.add_row ["Unit Layanan Pendidikan — SIT Insantama"]
+        sheet.add_row ["Unit Layanan Pendidikan — SIT Insantama Rangkasbitung"]
         sheet.add_row ["No. Pesanan", "##{order.id}"]
         sheet.add_row ["Tanggal", order.created_at.strftime("%d %b %Y %H:%M")]
         sheet.add_row ["Nama", order.customer_name]
@@ -153,7 +153,7 @@ class PesanController < ApplicationController
     package = Axlsx::Package.new
     wb = package.workbook
     wb.add_worksheet(name: "Pesanan") do |sheet|
-      sheet.add_row ["Unit Layanan Pendidikan — SIT Insantama"]
+      sheet.add_row ["Unit Layanan Pendidikan — SIT Insantama Rangkasbitung"]
       sheet.add_row ["No. Pesanan", "##{order.id}"]
       sheet.add_row ["Tanggal", order.created_at.strftime("%d %b %Y %H:%M")]
       sheet.add_row ["Nama", order.customer_name]
