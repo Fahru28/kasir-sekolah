@@ -1,16 +1,17 @@
-<% content_for :title, "Orders" %>
+<% content_for :title, "Pesanan" %>
 <% filters_active = params.values_at(:from, :to).any?(&:present?) %>
 
 <div class="w-full" data-controller="filter-panel">
-  <section class="mb-6 rounded-lg bg-gradient-to-r from-gray-800 to-gray-900 px-6 py-8 shadow">
+  <section class="mb-6 rounded-lg bg-gradient-to-r from-emerald-700 to-teal-700 px-6 py-8 shadow">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
-        <h1 class="text-3xl font-bold tracking-tight text-white">Orders</h1>
-        <p class="mt-1 text-sm text-gray-300">View your orders</p>
+        <p class="text-white/70 text-xs">Unit Layanan Pendidikan · SIT Insantama</p>
+        <h1 class="text-3xl font-bold tracking-tight text-white">Kelola Pesanan</h1>
+        <p class="mt-1 text-sm text-white/80">Pesanan masuk dari orang tua — lihat item & ubah status</p>
       </div>
-      <%= link_to "New order", new_order_path,
+      <%= link_to "Buat pesanan manual", new_order_path,
             data: { turbo_frame: "record_drawer" },
-            class: "rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow hover:bg-gray-100" %>
+            class: "rounded-md bg-white px-4 py-2 text-sm font-semibold text-emerald-700 shadow hover:bg-gray-100" %>
     </div>
   </section>
 
@@ -31,7 +32,7 @@
         </svg>
       </span>
       <%= form.search_field :q, value: params[:q],
-            placeholder: "Search orders by status, customer name, customer class, customer phone",
+            placeholder: "Cari pesanan: status, nama, kelas, WA, barang...",
             class: "block w-full rounded-lg border border-gray-300 py-3 pl-11 pr-4 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500" %>
     </div>
 
@@ -81,12 +82,11 @@
       <table class="min-w-full divide-y divide-gray-200">
         <thead class="bg-gray-50">
           <tr>
-            <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Status</th>
-            <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Customer name</th>
-            <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hidden md:table-cell">Customer class</th>
-            <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hidden md:table-cell">Customer phone</th>
-            <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hidden md:table-cell">Total amount</th>
-            <th scope="col" class="px-4 py-3"><span class="sr-only">Actions</span></th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">No. / Status</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Pemesan</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Item pesanan</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hidden md:table-cell">Total</th>
+            <th scope="col" class="px-4 py-3"><span class="sr-only">Aksi</span></th>
           </tr>
         </thead>
         <tbody id="orders" class="divide-y divide-gray-200 bg-white">
@@ -98,11 +98,11 @@
     <%= llama_pagination_nav(@pagy) %>
   <% else %>
     <div class="rounded-lg bg-white px-6 py-16 text-center shadow">
-      <p class="text-sm text-gray-500">No orders found.</p>
+      <p class="text-sm text-gray-500">Belum ada pesanan.</p>
       <p class="mt-3">
-        <%= link_to "New order", new_order_path,
+        <%= link_to "Buat pesanan", new_order_path,
               data: { turbo_frame: "record_drawer" },
-              class: "text-sm font-medium text-blue-600 hover:underline" %>
+              class: "text-sm font-medium text-emerald-600 hover:underline" %>
       </p>
     </div>
   <% end %>

@@ -1,16 +1,41 @@
 <tr id="<%= dom_id order %>" data-drawer-row class="hover:bg-gray-50">
-  <td class="px-4 py-3 text-sm font-medium text-gray-900">
-    <%= link_to (order.status).presence || "Order ##{order.id}", order,
-          data: { turbo_frame: "record_drawer" },
-          class: "text-blue-600 hover:underline" %>
+  <td class="px-4 py-3 text-sm">
+    <%= link_to "##{order.id}", order, data: { turbo_frame: "record_drawer" }, class: "font-mono font-bold text-emerald-600 hover:underline" %>
+    <div class="mt-1"><span class="badge badge-sm <%= case order.status; when 'Menunggu' then 'badge-warning'; when 'Siap_Diambil' then 'badge-info'; when 'Selesai' then 'badge-success'; else 'badge-ghost'; end %>"><%= order.status_label %></span></div>
+    <div class="text-xs opacity-50 mt-1"><%= order.created_at.strftime("%d %b %H:%M") %></div>
   </td>
-  <td class="px-4 py-3 text-sm text-gray-600"><%= order.customer_name %></td>
-  <td class="px-4 py-3 text-sm text-gray-600 hidden md:table-cell"><%= order.customer_class %></td>
-  <td class="px-4 py-3 text-sm text-gray-600 hidden md:table-cell"><%= order.customer_phone %></td>
-  <td class="px-4 py-3 text-sm text-gray-600 hidden md:table-cell"><%= order.total_amount %></td>
+  <td class="px-4 py-3 text-sm">
+    <div class="font-medium text-gray-900"><%= order.customer_name %></div>
+    <div class="text-xs text-gray-500"><%= order.customer_class.presence || "-" %> · <%= order.customer_phone.presence || "-" %></div>
+    <% if order.note.present? %><div class="text-xs italic opacity-60 mt-1">“<%= order.note.truncate(40) %>”</div><% end %>
+  </td>
+  <td class="px-4 py-3 text-sm">
+    <% if order.order_items.any? %>
+      <div class="space-y-0.5">
+        <% order.order_items.includes(:product).each do |oi| %>
+          <div class="flex justify-between gap-2 text-xs">
+            <span class="truncate"><%= oi.product.name %> × <%= oi.quantity %></span>
+            <span class="font-medium shrink-0"><%= number_to_currency(oi.subtotal, unit: "Rp", delimiter: ".", precision: 0) %></span>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <span class="text-xs opacity-50">—</span>
+    <% end %>
+  </td>
+  <td class="px-4 py-3 text-sm hidden md:table-cell">
+    <span class="font-bold text-emerald-600"><%= number_to_currency(order.total_amount.to_i, unit: "Rp", delimiter: ".", precision: 0) %></span>
+  </td>
   <td class="px-4 py-3 text-right text-sm">
-    <%= link_to "Edit", edit_order_path(order),
-          data: { turbo_frame: "record_drawer" },
-          class: "text-blue-600 hover:underline" %>
+    <div class="flex flex-col gap-1 items-end">
+      <%= link_to "Lihat", order, data: { turbo_frame: "record_drawer" }, class: "text-emerald-600 hover:underline text-xs" %>
+      <div class="flex gap-1">
+        <% if order.status == "Menunggu" %>
+          <%= button_to "Siap", update_status_order_path(order, status: "Siap_Diambil"), method: :patch, class: "btn btn-xs btn-info" %>
+        <% elsif order.status == "Siap_Diambil" %>
+          <%= button_to "Selesai", update_status_order_path(order, status: "Selesai"), method: :patch, class: "btn btn-xs btn-success" %>
+        <% end %>
+      </div>
+    </div>
   </td>
 </tr>
