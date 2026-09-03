@@ -24,9 +24,12 @@
         </div>
         <p class="mt-3 flex items-center gap-2 text-sm"><span class="badge <%= @order.status == 'Menunggu' ? 'badge-warning' : 'badge-success' %>"><%= @order.status_label %></span> <span class="text-xs opacity-60">Tunjukkan halaman ini saat ambil · Bayar di tempat</span></p>
       </div>
-      <div class="flex gap-2 mt-6">
-        <a href="/pesan" class="btn flex-1 bg-amber-400 hover:bg-amber-500 border-0 text-white rounded-xl">Pesan lagi</a>
-        <a href="/" class="btn btn-ghost flex-1 rounded-xl">Ke Dashboard</a>
+      <div class="flex flex-col gap-2 mt-6">
+        <a href="<%= pesan_download_path(@order) %>" class="btn btn-success gap-2 w-full"><i class="fa-solid fa-file-excel"></i> Download Pesanan (Excel)</a>
+        <div class="flex gap-2">
+          <a href="/pesan" class="btn flex-1 bg-amber-400 hover:bg-amber-500 border-0 text-white rounded-xl">Pesan lagi</a>
+          <a href="/" class="btn btn-ghost flex-1 rounded-xl">Ke Dashboard</a>
+        </div>
       </div>
     </div>
   </div>

@@ -10,12 +10,12 @@
   </div>
   <div class="navbar-center hidden lg:flex">
     <ul class="menu menu-horizontal px-1 gap-1">
-      <li><a href="/dashboard" class="<%= 'active' if request.path == '/dashboard' || request.path == '/' %>"><i class="fa-solid fa-chart-line"></i> Dashboard</a></li>
       <li><a href="/kasir" class="<%= 'active' if request.path.start_with?('/kasir') %>"><i class="fa-solid fa-cash-register"></i> Kasir</a></li>
-      <li><a href="/sales" class="<%= 'active' if request.path.start_with?('/sales') && !request.path.start_with?('/sales') %>"><i class="fa-solid fa-receipt"></i> Penjualan</a></li>
+      <li><a href="/pesan"><i class="fa-solid fa-bag-shopping"></i> Pesan</a></li>
+      <li><a href="/orders"><i class="fa-solid fa-clipboard-list"></i> Pesanan</a></li>
+      <li><a href="/sales"><i class="fa-solid fa-receipt"></i> Penjualan</a></li>
       <li><a href="/piutang" class="<%= 'active' if request.path == '/piutang' %>"><i class="fa-solid fa-hand-holding-dollar"></i> Piutang</a></li>
       <li><a href="/products" class="<%= 'active' if request.path.start_with?('/products') %>"><i class="fa-solid fa-box"></i> Barang</a></li>
-      <li><a href="/stock_entries" class="<%= 'active' if request.path.start_with?('/stock') %>"><i class="fa-solid fa-truck-ramp-box"></i> Stok Masuk</a></li>
       <li><a href="/students" class="<%= 'active' if request.path.start_with?('/students') %>"><i class="fa-solid fa-children"></i> Siswa</a></li>
       <li><a href="/laporan" class="<%= 'active' if request.path.start_with?('/laporan') %>"><i class="fa-solid fa-chart-column"></i> Laporan</a></li>
     </ul>
@@ -24,21 +24,6 @@
     <% if user_signed_in? %>
       <span class="hidden sm:inline text-xs opacity-60 mr-1"><%= current_user.email %></span>
       <%= button_to destroy_user_session_path, method: :delete, class: "btn btn-ghost btn-sm gap-1" do %><i class="fa-solid fa-right-from-bracket"></i> Keluar<% end %>
-    <% else %>
-      <a href="/users/sign_in" class="btn btn-primary btn-sm gap-1"><i class="fa-solid fa-right-to-bracket"></i> Login</a>
     <% end %>
-    <div class="dropdown dropdown-end lg:hidden">
-      <label tabindex="0" class="btn btn-ghost"><i class="fa-solid fa-bars"></i></label>
-      <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
-        <li><a href="/dashboard">Dashboard</a></li>
-        <li><a href="/kasir">Kasir</a></li>
-        <li><a href="/sales">Penjualan</a></li>
-        <li><a href="/piutang">Piutang</a></li>
-        <li><a href="/products">Barang</a></li>
-        <li><a href="/stock_entries">Stok Masuk</a></li>
-        <li><a href="/students">Siswa</a></li>
-        <li><a href="/laporan">Laporan</a></li>
-      </ul>
-    </div>
   </div>
 </div>

@@ -94,10 +94,30 @@ class PesanController < ApplicationController
 
   def sukses
     @order = Order.find(params[:id])
-    # only allow owner via session
-    unless session[:last_order_id].to_i == @order.id
-      # still show but no restriction for demo
+  end
+
+  def download
+    order = Order.find(params[:id])
+    package = Axlsx::Package.new
+    wb = package.workbook
+    wb.add_worksheet(name: "Pesanan") do |sheet|
+      sheet.add_row ["Unit Layanan Pendidikan — SIT Insantama"]
+      sheet.add_row ["No. Pesanan", "##{order.id}"]
+      sheet.add_row ["Tanggal", order.created_at.strftime("%d %b %Y %H:%M")]
+      sheet.add_row ["Nama", order.customer_name]
+      sheet.add_row ["Kelas", order.customer_class]
+      sheet.add_row ["WA", order.customer_phone]
+      sheet.add_row ["Catatan", order.note]
+      sheet.add_row ["Status", order.status_label]
+      sheet.add_row []
+      sheet.add_row ["Barang", "Qty", "Harga", "Subtotal"]
+      order.order_items.includes(:product).each do |oi|
+        sheet.add_row [oi.product.name, oi.quantity, oi.price, oi.subtotal]
+      end
+      sheet.add_row []
+      sheet.add_row ["TOTAL", "", "", order.total_amount]
     end
+    send_data package.to_stream.read, filename: "pesanan-#{order.id}.xlsx", type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
   end
 
   private

@@ -7,6 +7,7 @@ Rails.application.routes.draw do
   post "pesan/clear", to: "pesan#clear", as: :pesan_clear
   post "pesan/checkout", to: "pesan#checkout", as: :pesan_checkout
   get  "pesan/sukses/:id", to: "pesan#sukses", as: :pesan_sukses
+  get  "pesan/:id/download", to: "pesan#download", as: :pesan_download
 
   # Manajemen pesanan (kasir/admin, perlu login)
   resources :orders do
