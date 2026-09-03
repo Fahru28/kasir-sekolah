@@ -98,6 +98,58 @@ class PesanController < ApplicationController
 
   def download
     order = Order.find(params[:id])
+    # Render struk sebagai PNG via HTML canvas — tapi untuk server-side kita bikin PNG sederhana
+    # Pakai Ruby: generate PNG struk pesanan
+    require "chunky_png" rescue nil
+    # Fallback: kalau ChunkyPNG tidak ada, tetap kirim Excel biar tidak error
+    unless defined?(ChunkyPNG)
+      # coba kirim PDF-simple / tetap Excel kalau gem belum ada
+      package = Axlsx::Package.new
+      wb = package.workbook
+      wb.add_worksheet(name: "Pesanan") do |sheet|
+        sheet.add_row ["Unit Layanan Pendidikan — SIT Insantama"]
+        sheet.add_row ["No. Pesanan", "##{order.id}"]
+        sheet.add_row ["Tanggal", order.created_at.strftime("%d %b %Y %H:%M")]
+        sheet.add_row ["Nama", order.customer_name]
+        sheet.add_row ["Kelas", order.customer_class]
+        sheet.add_row ["WA", order.customer_phone]
+        sheet.add_row ["Catatan", order.note]
+        sheet.add_row ["Status", order.status_label]
+        sheet.add_row []
+        sheet.add_row ["Barang", "Qty", "Harga", "Subtotal"]
+        order.order_items.includes(:product).each do |oi|
+          sheet.add_row [oi.product.name, oi.quantity, oi.price, oi.subtotal]
+        end
+        sheet.add_row []
+        sheet.add_row ["TOTAL", "", "", order.total_amount]
+      end
+      send_data package.to_stream.read, filename: "pesanan-#{order.id}.xlsx", type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      return
+    end
+
+    # --- PNG struk dengan ChunkyPNG ---
+    width = 600
+    header_h = 90
+    row_h = 28
+    footer_h = 90
+    n = order.order_items.size
+    height = header_h + 30 + (n + 1) * row_h + footer_h
+
+    png = ChunkyPNG::Image.new(width, height, ChunkyPNG::Color::WHITE)
+    # header hijau
+    header_color = ChunkyPNG::Color.from_hex("#059669")
+    (0...header_h).each do |y|
+      (0...width).each { |x| png[x, y] = header_color }
+    end
+    # helpers
+    def draw_text_png(png, x, y, text, size: 14, color: ChunkyPNG::Color::BLACK)
+      # ChunkyPNG tidak punya text renderer bagus — kita pakai fallback: gambar sudah ada
+      # Untuk sekarang, PNG kosong dengan garis; text akan di-render via HTML2Canvas di browser
+      # Jadi download tetap route ke HTML image
+    end
+
+    # Sederhana: PNG putih dengan border — text akan diganti client-side download
+    # Kirim Excel saja kalau di server belum bisa render text ke PNG secara bagus
     package = Axlsx::Package.new
     wb = package.workbook
     wb.add_worksheet(name: "Pesanan") do |sheet|

@@ -9,7 +9,7 @@ class DashboardController < ApplicationController
       @total_piutang = Sale.where(payment_method: "Piutang").sum { |s| s.outstanding rescue 0 } || 0
       @low_stock = Product.all.select { |p| p.low_stock? rescue false } || []
       @recent_sales = Sale.includes(:student).order(sale_date: :desc).limit(5)
-      @pending_orders = Order.where(status: "Menunggu").order(created_at: :desc).limit(5)
+      @pending_orders = Order.includes(order_items: :product).where(status: "Menunggu").order(created_at: :desc).limit(5)
       @pending_count = Order.where(status: "Menunggu").count
     rescue => e
       Rails.logger.error("Dashboard error: #{e.message}")

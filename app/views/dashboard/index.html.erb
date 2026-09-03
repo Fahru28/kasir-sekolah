@@ -106,16 +106,29 @@
             <% if @pending_count > 0 %><span class="badge badge-warning badge-sm animate-pulse"><%= @pending_count %> baru</span><% end %>
           </div>
           <% if @pending_orders.any? %>
-            <div class="space-y-2">
+            <div class="space-y-3">
               <% @pending_orders.each do |o| %>
                 <div class="p-3 rounded-xl bg-warning/10 border border-warning/20">
                   <div class="flex justify-between items-start gap-2">
-                    <div class="min-w-0">
-                      <p class="font-medium text-sm truncate">#<%= o.id %> · <%= o.customer_name %> <% if o.customer_class.present? %><span class="opacity-60">(<%= o.customer_class %>)</span><% end %></p>
-                      <p class="text-xs opacity-60"><%= o.order_items.map { |oi| "#{oi.product.name}×#{oi.quantity}" }.join(", ") %></p>
-                      <p class="text-xs font-semibold mt-1"><%= rupiah(o.total_amount) %> · <%= o.created_at.strftime("%H:%M") %></p>
+                    <div class="min-w-0 flex-1">
+                      <p class="font-medium text-sm">#<%= o.id %> · <%= o.customer_name %> <% if o.customer_class.present? %><span class="opacity-60">(<%= o.customer_class %>)</span><% end %></p>
+                      <p class="text-xs opacity-60"><%= o.created_at.strftime("%d %b %H:%M") %> · <%= o.customer_phone %></p>
+                      <% if o.note.present? %><p class="text-xs italic opacity-60 mt-0.5">“<%= o.note %>”</p><% end %>
+                      <!-- ITEM APA YANG DIPESAN - SEKARANG JELAS -->
+                      <div class="mt-2 bg-white rounded-lg border p-2">
+                        <p class="text-[11px] font-bold opacity-60 mb-1"><i class="fa-solid fa-list mr-1"></i> Pesanan:</p>
+                        <% o.order_items.each do |oi| %>
+                          <div class="flex justify-between text-xs py-0.5">
+                            <span><%= oi.product.name %> × <%= oi.quantity %></span>
+                            <span class="font-semibold"><%= rupiah(oi.subtotal) %></span>
+                          </div>
+                        <% end %>
+                        <div class="flex justify-between text-xs font-extrabold border-t pt-1 mt-1">
+                          <span>Total</span><span class="text-primary"><%= rupiah(o.total_amount) %></span>
+                        </div>
+                      </div>
                     </div>
-                    <div class="flex flex-col gap-1 shrink-0">
+                    <div class="flex flex-col gap-1 shrink-0 ml-2">
                       <%= button_to "Siap", update_status_order_path(o, status: "Siap_Diambil"), method: :patch, class: "btn btn-xs btn-success" %>
                       <%= button_to "Batal", update_status_order_path(o, status: "Dibatalkan"), method: :patch, class: "btn btn-xs btn-ghost" %>
                     </div>
