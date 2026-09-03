@@ -19,6 +19,7 @@ ENV RAILS_ENV=production \
 FROM base AS build
 
 COPY Gemfile Gemfile.lock ./
+COPY vendor/llama_bot_rails vendor/llama_bot_rails/
 RUN bundle install && \
     rm -rf ~/.bundle /usr/local/bundle/ruby/*/cache
 
