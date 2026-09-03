@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html data-theme="light">
+<head>
+  <title><%= @project.name %> - LlamaBotRails</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <%= csrf_meta_tags %>
+  <style>
+    .sortable-ghost { opacity: 0.5; background-color: #dbeafe; }
+    .sortable-drag { opacity: 1; }
+  </style>
+</head>
+<body>
+  <div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8">
+    <div class="max-w-7xl mx-auto">
+      <!-- Header -->
+      <div class="mb-8">
+        <div class="flex items-center gap-4 mb-4">
+          <%= link_to llama_bot_rails.projects_path, class: "btn btn-sm btn-outline" do %>
+            <i class="fas fa-arrow-left"></i> Projects
+          <% end %>
+          <%= link_to llama_bot_rails.edit_project_path(@project), class: "btn btn-sm btn-ghost" do %>
+            <i class="fas fa-edit"></i> Edit
+          <% end %>
+        </div>
+        <h1 class="text-4xl font-bold text-gray-800 flex items-center gap-3">
+          <i class="fas fa-folder-open text-primary"></i>
+          <%= @project.name %>
+        </h1>
+        <% if @project.description.present? %>
+          <p class="text-gray-600 mt-2"><%= @project.description %></p>
+        <% end %>
+        <div class="flex gap-4 mt-3 text-sm text-gray-500">
+          <span><i class="fas fa-ticket"></i> <%= @project.ticket_count %> tickets</span>
+          <span><i class="fas fa-check-circle text-success"></i> <%= @project.completed_ticket_count %> completed</span>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="mb-6 flex items-center gap-4 flex-wrap">
+        <button type="button" onclick="location.reload()" class="btn btn-outline btn-sm" title="Refresh board">
+          <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+        <%= link_to llama_bot_rails.new_ticket_path(project_id: @project.id), class: "btn btn-primary btn-sm ml-auto" do %>
+          <i class="fas fa-plus"></i> New Ticket
+        <% end %>
+      </div>
+
+      <!-- Kanban Board -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+        <% LlamaBotRails::Ticket::STATUSES.each do |status| %>
+          <%
+            icon = case status
+                   when 'backlog' then 'fa-inbox'
+                   when 'assigned' then 'fa-user-check'
+                   when 'in_progress' then 'fa-spinner'
+                   when 'review' then 'fa-eye'
+                   when 'incomplete' then 'fa-exclamation-triangle'
+                   when 'done' then 'fa-check-circle'
+                   end
+            gradient = case status
+                       when 'backlog' then 'from-gray-700 to-gray-600'
+                       when 'assigned' then 'from-blue-700 to-blue-600'
+                       when 'in_progress' then 'from-amber-600 to-amber-500'
+                       when 'review' then 'from-purple-700 to-purple-600'
+                       when 'incomplete' then 'from-red-700 to-red-600'
+                       when 'done' then 'from-green-700 to-green-600'
+                       end
+          %>
+
+          <div class="bg-white rounded-lg shadow-sm overflow-hidden flex flex-col h-full">
+            <div class="bg-gradient-to-r <%= gradient %> px-4 py-3 text-white">
+              <div class="flex items-center gap-2 mb-1">
+                <i class="fas <%= icon %>"></i>
+                <h2 class="font-semibold text-sm uppercase tracking-wide"><%= status.humanize %></h2>
+              </div>
+              <span class="inline-block bg-yellow-300 text-xs px-2 py-1 rounded-full text-gray-900 font-semibold">
+                <%= @tickets[status]&.count || 0 %> tickets
+              </span>
+            </div>
+
+            <div class="flex-1 p-4 bg-gray-50 overflow-y-auto space-y-3 sortable-column" data-status="<%= status %>" style="min-height: 300px;">
+              <% (@tickets[status] || []).each_with_index do |ticket, idx| %>
+                <div class="kanban-card bg-white rounded-lg p-3 shadow-sm border-l-4 border-blue-500 cursor-pointer hover:shadow-md transition-shadow" data-ticket-id="<%= ticket.id %>">
+                  <h3 class="font-semibold text-gray-800 text-sm line-clamp-2 mb-2"><%= ticket.title %></h3>
+                  <div class="flex gap-1 mb-2">
+                    <%= link_to llama_bot_rails.ticket_path(ticket), class: "btn btn-ghost btn-xs", title: "View" do %>
+                      <i class="fas fa-eye text-blue-500"></i>
+                    <% end %>
+                    <%= link_to llama_bot_rails.edit_ticket_path(ticket), class: "btn btn-ghost btn-xs", title: "Edit" do %>
+                      <i class="fas fa-edit text-gray-500"></i>
+                    <% end %>
+                  </div>
+                  <% if ticket.description.present? %>
+                    <p class="text-xs text-gray-600 line-clamp-2"><%= ticket.description %></p>
+                  <% end %>
+                  <% if ticket.points_estimate.present? %>
+                    <div class="mt-2">
+                      <span class="badge badge-xs badge-outline"><%= ticket.points_estimate %> pts</span>
+                    </div>
+                  <% end %>
+                </div>
+              <% end %>
+
+              <% if (@tickets[status] || []).empty? %>
+                <div class="flex items-center justify-center h-32 text-gray-400">
+                  <div class="text-center">
+                    <i class="fas fa-inbox text-2xl mb-2"></i>
+                    <p class="text-xs">No tickets</p>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

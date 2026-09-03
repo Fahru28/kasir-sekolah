@@ -1,0 +1,11 @@
+<% current = local_assigns.fetch(:current, :activity) %>
+<div class="flex items-center justify-between mb-6 flex-wrap gap-3">
+  <div>
+    <h1 class="text-3xl font-bold"><%= local_assigns.fetch(:title, "Activity") %></h1>
+    <p class="text-sm text-gray-500 mt-1"><%= local_assigns.fetch(:subtitle, "What happened in this application") %></p>
+  </div>
+  <div class="tabs tabs-boxed">
+    <%= link_to "Activity", activity_path, class: "tab #{'tab-active' if current == :activity}" %>
+    <%= link_to "Usage", activity_usage_path, class: "tab #{'tab-active' if current == :usage}" %>
+  </div>
+</div>

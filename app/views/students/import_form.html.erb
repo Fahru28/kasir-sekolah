@@ -1,0 +1,33 @@
+<div class="max-w-3xl mx-auto px-4 py-6">
+  <a href="/students" class="btn btn-ghost btn-sm gap-1 mb-4"><i class="fa-solid fa-arrow-left"></i> Kembali ke Data Anak</a>
+
+  <div class="card bg-base-100 shadow border border-base-200">
+    <div class="card-body">
+      <h1 class="text-xl font-bold flex items-center gap-2"><i class="fa-solid fa-file-excel text-success"></i> Upload Data Murid dari Excel</h1>
+      <p class="text-sm opacity-60 mt-1">Upload file <b>.xlsx / .xls / .csv</b>. Kolom yang dibutuhkan: <span class="font-mono text-xs">ID_Anak, NIS, Nama_Anak, Kelas, Nama_Wali, WA, Alamat, Status_Aktif</span> — sama seperti sheet <b>Data_Anak</b> di file asli.</p>
+
+      <div class="alert bg-amber-50 border-amber-200 mt-4 py-3">
+        <i class="fa-solid fa-circle-info text-amber-600"></i>
+        <div class="text-sm">
+          <p class="font-semibold">Tips:</p>
+          <ul class="list-disc list-inside text-xs opacity-70">
+            <li>Baris pertama harus header (judul kolom).</li>
+            <li>Jika ID_Anak sudah ada, datanya akan <b>diperbarui</b> (tidak duplikat).</li>
+            <li>Kosongkan baris jika tidak ada data wali/WA/alamat — tidak wajib.</li>
+            <li><a href="/students/template.xlsx" class="link link-primary">Download template Excel</a> biar formatnya pas.</li>
+          </ul>
+        </div>
+      </div>
+
+      <%= form_with url: import_students_path, method: :post, multipart: true, class: "mt-4 space-y-4" do |f| %>
+        <label class="form-control">
+          <span class="label-text font-semibold">Pilih file Excel</span>
+          <input type="file" name="file" accept=".xlsx,.xls,.csv" required class="file-input file-input-bordered file-input-primary w-full mt-1" />
+          <span class="label-text-alt opacity-60">Maksimal beberapa ribu baris — langsung diproses.</span>
+        </label>
+        <button type="submit" class="btn btn-primary gap-2"><i class="fa-solid fa-upload"></i> Upload & Import</button>
+        <a href="/students" class="btn btn-ghost">Batal</a>
+      <% end %>
+    </div>
+  </div>
+</div>

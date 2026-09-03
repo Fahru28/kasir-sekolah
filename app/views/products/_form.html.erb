@@ -1,0 +1,17 @@
+<%= form_with model: @product, class: "space-y-4" do |f| %>
+  <% if @product.errors.any? %><div class="alert alert-error text-sm"><%= @product.errors.full_messages.join(", ") %></div><% end %>
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <label class="form-control"><span class="label-text">Kode</span><%= f.text_field :code, class: "input input-bordered", placeholder: "B-016" %></label>
+    <label class="form-control"><span class="label-text">Nama Barang</span><%= f.text_field :name, class: "input input-bordered" %></label>
+    <label class="form-control"><span class="label-text">Kategori</span><%= f.select :category, ["Makanan","Minuman","Alat Tulis","Seragam","Buku","Lain-lain"], {}, class: "select select-bordered" %></label>
+    <label class="form-control"><span class="label-text">Satuan</span><%= f.text_field :unit, class: "input input-bordered", placeholder: "Pcs" %></label>
+    <label class="form-control"><span class="label-text">Harga Modal</span><%= f.number_field :cost_price, class: "input input-bordered" %></label>
+    <label class="form-control"><span class="label-text">Harga Jual</span><%= f.number_field :selling_price, class: "input input-bordered" %></label>
+    <label class="form-control"><span class="label-text">Stok Awal</span><%= f.number_field :initial_stock, class: "input input-bordered" %></label>
+    <label class="form-control"><span class="label-text">Min Stok</span><%= f.number_field :min_stock, class: "input input-bordered" %></label>
+  </div>
+  <div class="flex gap-2">
+    <button type="submit" class="btn btn-primary gap-2"><i class="fa-solid fa-check"></i> Simpan</button>
+    <a href="/products" class="btn btn-ghost">Batal</a>
+  </div>
+<% end %>

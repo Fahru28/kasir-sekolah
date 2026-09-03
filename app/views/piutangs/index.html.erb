@@ -1,0 +1,43 @@
+<div class="max-w-7xl mx-auto px-4 py-6">
+  <h1 class="text-2xl font-bold flex items-center gap-2 mb-1"><i class="fa-solid fa-hand-holding-dollar text-warning"></i> Piutang</h1>
+  <p class="text-sm opacity-60 mb-6">Daftar hutang siswa yang belum lunas. Klik untuk catat pembayaran.</p>
+
+  <% total_outstanding = @piutangs.sum { |s| s.outstanding } %>
+  <div class="stats shadow border border-warning/20 w-full mb-6">
+    <div class="stat">
+      <div class="stat-title">Total Piutang Berjalan</div>
+      <div class="stat-value text-warning text-2xl"><%= rupiah(total_outstanding) %></div>
+      <div class="stat-desc"><%= @piutangs.count { |s| s.outstanding > 0 } %> transaksi belum lunas</div>
+    </div>
+  </div>
+
+  <div class="card bg-base-100 shadow border border-base-200">
+    <div class="card-body p-0">
+      <div class="overflow-x-auto">
+        <table class="table">
+          <thead><tr><th>No</th><th>Tanggal</th><th>Siswa</th><th>Total Hutang</th><th>Dibayar</th><th>Sisa</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            <% @piutangs.each do |s| %>
+              <tr class="hover <%= s.outstanding == 0 ? 'opacity-50' : '' %>">
+                <td><a href="/sales/<%= s.id %>" class="link link-primary font-mono text-sm"><%= s.number %></a></td>
+                <td class="text-sm"><%= s.sale_date %></td>
+                <td class="text-sm"><%= s.student.name %><br><span class="text-xs opacity-60"><%= s.student.class_name %></span></td>
+                <td class="text-sm"><%= rupiah(s.total_amount) %></td>
+                <td class="text-sm text-success"><%= rupiah(s.debt_payments.sum(:amount)) %></td>
+                <td class="font-bold text-sm <%= s.outstanding > 0 ? 'text-warning' : 'text-success' %>"><%= rupiah(s.outstanding) %></td>
+                <td><span class="badge badge-sm <%= s.outstanding == 0 ? 'badge-success' : 'badge-warning' %>"><%= s.outstanding == 0 ? 'Lunas' : 'Belum Lunas' %></span></td>
+                <td><a href="/sales/<%= s.id %>" class="btn btn-xs <%= s.outstanding > 0 ? 'btn-warning' : 'btn-ghost' %>"><%= s.outstanding > 0 ? 'Bayar' : 'Lihat' %></a></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+      <% if @piutangs.empty? %>
+        <div class="text-center py-12">
+          <i class="fa-solid fa-face-smile text-3xl opacity-20"></i>
+          <p class="text-sm opacity-60 mt-2">Tidak ada piutang</p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

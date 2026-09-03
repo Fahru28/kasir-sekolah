@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html data-theme="light">
+<head>
+  <title><%= request.host %> | Ticket Timeline</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2310b981'><path d='M22 10V6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v4c1.1 0 2 .9 2 2s-.9 2-2 2v4c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2v-4c-1.1 0-2-.9-2-2s.9-2 2-2zm-2-1.46c-1.19.69-2 1.99-2 3.46s.81 2.77 2 3.46V18H4v-2.54c1.19-.69 2-1.99 2-3.46 0-1.48-.81-2.77-2-3.46V6h16v2.54z'/></svg>">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <%= csrf_meta_tags %>
+  <style>
+    /* Timeline Container */
+    #timeline-container {
+      scrollbar-width: thin;
+      scrollbar-color: #94a3b8 #e2e8f0;
+    }
+
+    #timeline-container::-webkit-scrollbar {
+      height: 12px;
+    }
+
+    #timeline-container::-webkit-scrollbar-track {
+      background: #e2e8f0;
+      border-radius: 6px;
+    }
+
+    #timeline-container::-webkit-scrollbar-thumb {
+      background: #94a3b8;
+      border-radius: 6px;
+    }
+
+    #timeline-container::-webkit-scrollbar-thumb:hover {
+      background: #64748b;
+    }
+
+    /* Time Axis */
+    .axis-label {
+      position: absolute;
+      bottom: 4px;
+      transform: translateX(-50%);
+      font-size: 11px;
+      color: #64748b;
+      white-space: nowrap;
+    }
+
+    .axis-label.major {
+      font-weight: 600;
+      color: #374151;
+      font-size: 12px;
+    }
+
+    .axis-tick {
+      position: absolute;
+      bottom: 0;
+      width: 1px;
+      background: #d1d5db;
+    }
+
+    .axis-tick.major {
+      height: 12px;
+      background: #9ca3af;
+    }
+
+    .axis-tick.minor {
+      height: 6px;
+    }
+
+    /* Grid Lines */
+    .grid-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: #f3f4f6;
+      pointer-events: none;
+    }
+
+    .grid-line.major {
+      background: #e5e7eb;
+    }
+
+    /* Ticket Cards */
+    .timeline-ticket {
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .timeline-ticket:hover {
+      transform: scale(1.03);
+      z-index: 100 !important;
+    }
+
+    /* Minimap */
+    #timeline-minimap {
+      transition: all 0.2s ease;
+    }
+
+    #minimap-viewport {
+      transition: left 0.1s ease, width 0.1s ease;
+    }
+
+    /* Scale button active state */
+    .scale-btn.btn-active {
+      background: #3b82f6 !important;
+      color: white !important;
+      border-color: #3b82f6 !important;
+    }
+
+    /* Toast Notification Styles */
+    @keyframes toastSlideIn {
+      from { opacity: 0; transform: translateX(400px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes toastSlideOut {
+      from { opacity: 1; transform: translateX(0); }
+      to { opacity: 0; transform: translateX(400px); }
+    }
+
+    .toast {
+      animation: toastSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
+    .toast.exiting {
+      animation: toastSlideOut 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
+    .toast-success {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      box-shadow: 0 8px 32px rgba(16, 185, 129, 0.15);
+    }
+  </style>
+</head>
+<body>
+  <!-- Toast Container -->
+  <div id="toast-container" class="fixed top-6 right-6 z-50 pointer-events-none"></div>
+
+  <div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <!-- Header -->
+    <div class="p-8 pb-4">
+      <div class="max-w-full mx-auto">
+        <!-- Header -->
+        <div class="mb-6 flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h1 class="text-4xl font-bold text-gray-800 flex items-center gap-3">
+              <i class="fas fa-stream text-blue-600"></i>
+              Ticket Timeline
+            </h1>
+            <p class="text-gray-600 mt-2">
+              <%= @ticket_count %> tickets over <%= @date_range_days %> days
+              <% if @selected_project_id.present? %>
+                <span class="badge badge-primary badge-sm ml-2">
+                  <%= @projects.find { |p| p.id.to_s == @selected_project_id.to_s }&.name || 'Project' %>
+                </span>
+              <% end %>
+            </p>
+          </div>
+
+          <!-- Navigation Links -->
+          <div class="flex gap-2">
+            <%= link_to llama_bot_rails.tickets_path(project_id: @selected_project_id), class: "btn btn-outline btn-sm" do %>
+              <i class="fas fa-columns"></i> Kanban Board
+            <% end %>
+            <%= link_to llama_bot_rails.projects_path, class: "btn btn-outline btn-sm" do %>
+              <i class="fas fa-folder-open"></i> Projects
+            <% end %>
+            <%= link_to llama_bot_rails.new_ticket_path, class: "btn btn-primary btn-sm" do %>
+              <i class="fas fa-plus"></i> New Ticket
+            <% end %>
+          </div>
+        </div>
+
+        <!-- Controls Row -->
+        <div class="flex items-center gap-4 flex-wrap mb-6">
+          <!-- Scale Selector -->
+          <div class="flex items-center gap-2">
+            <label class="text-sm text-gray-600">View:</label>
+            <div class="join">
+              <button type="button" class="btn btn-sm join-item scale-btn <%= @scale == 'year' ? 'btn-active' : '' %>" data-scale="year">Year</button>
+              <button type="button" class="btn btn-sm join-item scale-btn <%= @scale == 'month' ? 'btn-active' : '' %>" data-scale="month">Month</button>
+              <button type="button" class="btn btn-sm join-item scale-btn <%= @scale == 'week' ? 'btn-active' : '' %>" data-scale="week">Week</button>
+              <button type="button" class="btn btn-sm join-item scale-btn <%= @scale == 'day' ? 'btn-active' : '' %>" data-scale="day">Day</button>
+            </div>
+          </div>
+
+          <!-- Date Jump -->
+          <div class="flex items-center gap-2">
+            <label class="text-sm text-gray-600">Jump to:</label>
+            <input type="date" id="date-jump" class="input input-bordered input-sm"
+                   value="<%= Time.current.to_date %>">
+            <button type="button" class="btn btn-sm btn-outline" onclick="jumpToDate()">
+              <i class="fas fa-arrow-right"></i>
+            </button>
+          </div>
+
+          <!-- Project Filter -->
+          <div class="flex items-center gap-2">
+            <label class="text-sm text-gray-600">Project:</label>
+            <select id="project-filter" class="select select-bordered select-sm" onchange="filterByProject(this.value)">
+              <option value="">All Projects</option>
+              <% @projects.each do |project| %>
+                <option value="<%= project.id %>" <%= @selected_project_id.to_s == project.id.to_s ? 'selected' : '' %>>
+                  <%= project.name %>
+                </option>
+              <% end %>
+            </select>
+          </div>
+
+          <!-- Search + Date Range Filters -->
+          <div class="relative">
+            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none"></i>
+            <input
+              id="ticket-search"
+              type="text"
+              oninput="applyTimelineFilters()"
+              placeholder="Search title or details..."
+              class="input input-bordered input-sm pl-9 w-56"
+            >
+          </div>
+
+          <!-- Date Range (compact popover) -->
+          <div class="relative">
+            <button type="button" id="date-range-btn" onclick="toggleDateRange(event)" class="btn btn-outline btn-sm gap-2">
+              <i class="fas fa-calendar-alt text-gray-500"></i>
+              <span id="date-range-label">Any date</span>
+              <i class="fas fa-chevron-down text-[10px] opacity-60"></i>
+            </button>
+            <div id="date-range-panel" class="absolute hidden z-[9999] mt-1 left-0 bg-white rounded-lg shadow-xl border border-gray-200 p-3 w-60">
+              <label class="block text-xs font-medium text-gray-500 mb-1">From</label>
+              <input id="filter-date-start" type="date" onchange="applyTimelineFilters()" class="input input-bordered input-sm w-full mb-3">
+              <label class="block text-xs font-medium text-gray-500 mb-1">To</label>
+              <input id="filter-date-end" type="date" onchange="applyTimelineFilters()" class="input input-bordered input-sm w-full">
+            </div>
+          </div>
+
+          <button type="button" onclick="clearTimelineFilters()" class="btn btn-ghost btn-sm" title="Clear search & date filters">
+            <i class="fas fa-times"></i> Clear
+          </button>
+          <span id="filter-result-count" class="text-sm text-gray-500"></span>
+
+          <!-- Navigation Buttons -->
+          <div class="flex items-center gap-1 ml-auto">
+            <button type="button" class="btn btn-sm btn-outline" onclick="scrollTimeline('start')" title="Go to start">
+              <i class="fas fa-angle-double-left"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline" onclick="scrollTimeline('left')" title="Scroll left">
+              <i class="fas fa-angle-left"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline" onclick="scrollTimeline('today')" title="Go to today">
+              Today
+            </button>
+            <button type="button" class="btn btn-sm btn-outline" onclick="scrollTimeline('right')" title="Scroll right">
+              <i class="fas fa-angle-right"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline" onclick="scrollTimeline('end')" title="Go to end">
+              <i class="fas fa-angle-double-right"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Timeline Mini-map -->
+    <div class="px-8 mb-4">
+      <div id="timeline-minimap" class="h-10 bg-gray-200 rounded-lg relative overflow-hidden cursor-pointer shadow-inner">
+        <!-- Viewport indicator -->
+        <div id="minimap-viewport" class="absolute top-0 h-full bg-blue-500/30 border-2 border-blue-500 rounded"></div>
+        <!-- Ticket density dots will be added by JS -->
+      </div>
+    </div>
+
+    <!-- Main Timeline -->
+    <div class="px-8 overflow-hidden">
+      <div id="timeline-container" class="overflow-x-auto pb-4 bg-white rounded-lg shadow-sm" style="scroll-behavior: smooth;">
+        <div id="timeline-content" class="relative" style="min-height: 700px;">
+
+          <!-- Time Axis (sticky at top) -->
+          <div id="time-axis" class="sticky top-0 z-20 bg-white border-b border-gray-300 h-12 relative"></div>
+
+          <!-- Tickets Layer -->
+          <div id="tickets-layer" class="relative pt-4" style="min-height: 650px;">
+            <% @tickets.each do |ticket| %>
+              <%= render partial: 'timeline_ticket_card', locals: { ticket: ticket } %>
+            <% end %>
+
+            <!-- Today Marker -->
+            <div id="today-marker" class="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10" style="display: none;">
+              <div class="absolute -top-1 -translate-x-1/2 bg-red-500 text-white text-xs px-2 py-0.5 rounded whitespace-nowrap">
+                Today
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Status Legend -->
+    <div class="px-8 py-4">
+      <div class="flex items-center gap-4 flex-wrap text-sm">
+        <span class="text-gray-500">Status:</span>
+        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-gray-500"></span> Backlog</span>
+        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-blue-500"></span> Assigned</span>
+        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-amber-500"></span> In Progress</span>
+        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-purple-500"></span> Review</span>
+        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-red-500"></span> Incomplete</span>
+        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-green-500"></span> Done</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ticket Edit Modal -->
+  <dialog id="editModal" class="modal">
+    <div class="modal-box w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <h3 class="font-bold text-xl mb-6">
+        <i class="fas fa-edit mr-2 text-blue-600"></i>
+        Edit Ticket
+      </h3>
+
+      <input type="hidden" id="editTicketId">
+
+      <!-- Ticket Form -->
+      <div class="space-y-4 mb-6">
+        <!-- Title -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Title</label>
+          <input
+            id="editTitle"
+            type="text"
+            class="input input-bordered w-full"
+            placeholder="Ticket title..."
+          >
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+          <textarea
+            id="editDescription"
+            class="textarea textarea-bordered w-full h-24"
+            placeholder="Ticket description..."
+          ></textarea>
+        </div>
+
+        <!-- Project -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Project</label>
+          <select id="editProject" class="select select-bordered w-full">
+            <option value="">-- No Project --</option>
+            <% @projects.each do |project| %>
+              <option value="<%= project.id %>"><%= project.name %></option>
+            <% end %>
+          </select>
+        </div>
+
+        <!-- Status -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+          <select id="editStatus" class="select select-bordered w-full">
+            <option value="">-- Select Status --</option>
+            <% LlamaBotRails::Ticket::STATUSES.each do |status| %>
+              <option value="<%= status %>"><%= status.humanize %></option>
+            <% end %>
+          </select>
+        </div>
+
+        <!-- Notes -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+          <textarea
+            id="editNotes"
+            class="textarea textarea-bordered w-full h-20"
+            placeholder="Add notes here..."
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="modal-action gap-2">
+        <%= link_to "#", id: "viewTicketLink", class: "btn btn-ghost btn-sm" do %>
+          <i class="fas fa-eye mr-2"></i>View Full Details
+        <% end %>
+        <button
+          type="button"
+          class="btn btn-ghost btn-sm"
+          onclick="document.getElementById('editModal').close()"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary btn-sm"
+          onclick="saveTicket()"
+        >
+          <i class="fas fa-save mr-2"></i>Save Changes
+        </button>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+      <button>Close</button>
+    </form>
+  </dialog>
+
+  <script>
+    // Toast Manager
+    class ToastManager {
+      constructor() {
+        this.container = document.getElementById('toast-container');
+        this.toasts = new Map();
+      }
+
+      show(message, type = 'success', duration = 3000) {
+        const toastId = `toast-${Date.now()}`;
+        const existingToasts = this.container.children.length;
+
+        const toastEl = document.createElement('div');
+        toastEl.id = toastId;
+        toastEl.className = `toast toast-${type} rounded-lg px-5 py-4 text-white flex items-center gap-4 mb-2 pointer-events-auto`;
+        toastEl.innerHTML = `
+          <i class="fas fa-check-circle"></i>
+          <span class="text-sm font-medium">${message}</span>
+          <button onclick="toastManager.dismiss('${toastId}')" class="ml-2 hover:opacity-75">
+            <i class="fas fa-times"></i>
+          </button>
+        `;
+
+        this.container.appendChild(toastEl);
+        this.toasts.set(toastId, { element: toastEl, timeout: null });
+
+        const timeout = setTimeout(() => this.dismiss(toastId), duration);
+        this.toasts.get(toastId).timeout = timeout;
+      }
+
+      dismiss(toastId) {
+        const toast = this.toasts.get(toastId);
+        if (!toast) return;
+        if (toast.timeout) clearTimeout(toast.timeout);
+        toast.element.classList.add('exiting');
+        setTimeout(() => {
+          toast.element.remove();
+          this.toasts.delete(toastId);
+        }, 300);
+      }
+    }
+
+    const toastManager = new ToastManager();
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+
+    // Timeline Configuration
+    const TimelineConfig = {
+      scales: {
+        year: { pixelsPerDay: 8, majorUnit: 'month', minorUnit: 'week' },
+        month: { pixelsPerDay: 40, majorUnit: 'week', minorUnit: 'day' },
+        week: { pixelsPerDay: 150, majorUnit: 'day', minorUnit: 'hour' },
+        day: { pixelsPerDay: 400, majorUnit: 'hour', minorUnit: 'minute' }
+      },
+      cardWidth: 220,
+      cardHeight: 120,
+      cardGap: 20,
+      rowHeight: 130,
+      maxRows: 5
+    };
+
+    // State
+    let currentScale = '<%= @scale %>';
+    let earliestDate = new Date('<%= @earliest_date.iso8601 %>');
+    let latestDate = new Date('<%= @latest_date.iso8601 %>');
+
+    // Add padding to date range (7 days on each side)
+    earliestDate = new Date(earliestDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+    latestDate = new Date(latestDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    // DOM Elements
+    const container = document.getElementById('timeline-container');
+    const content = document.getElementById('timeline-content');
+    const axis = document.getElementById('time-axis');
+    const ticketsLayer = document.getElementById('tickets-layer');
+    const minimap = document.getElementById('timeline-minimap');
+    const minimapViewport = document.getElementById('minimap-viewport');
+    const todayMarker = document.getElementById('today-marker');
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      initTimeline();
+      updateMinimap();
+
+      // Sync minimap on scroll
+      container.addEventListener('scroll', updateMinimap);
+
+      // Minimap click navigation
+      minimap.addEventListener('click', (e) => {
+        const rect = minimap.getBoundingClientRect();
+        const clickPercent = (e.clientX - rect.left) / rect.width;
+        const scrollTarget = clickPercent * content.scrollWidth - container.clientWidth / 2;
+        container.scrollTo({ left: Math.max(0, scrollTarget), behavior: 'smooth' });
+      });
+
+      // Scale button handlers
+      document.querySelectorAll('.scale-btn').forEach(btn => {
+        btn.addEventListener('click', () => changeScale(btn.dataset.scale));
+      });
+    });
+
+    function initTimeline() {
+      const config = TimelineConfig.scales[currentScale];
+      const totalDays = Math.ceil((latestDate - earliestDate) / (1000 * 60 * 60 * 24)) + 1;
+      const totalWidth = Math.max(totalDays * config.pixelsPerDay, container.clientWidth);
+
+      // Set content width
+      content.style.width = `${totalWidth}px`;
+
+      // Generate axis
+      generateAxis(config, totalWidth);
+
+      // Position tickets
+      positionTickets(config);
+
+      // Position today marker
+      positionTodayMarker(config);
+
+      // Generate minimap dots
+      generateMinimapDots(config);
+    }
+
+    function generateAxis(config, totalWidth) {
+      axis.innerHTML = '';
+
+      const msPerDay = 24 * 60 * 60 * 1000;
+      let currentDate = new Date(earliestDate);
+      let lastMajorLabel = null;
+
+      while (currentDate <= latestDate) {
+        const daysFromStart = (currentDate - earliestDate) / msPerDay;
+        const position = daysFromStart * config.pixelsPerDay;
+
+        if (position > totalWidth) break;
+
+        const isMajor = shouldShowMajorTick(currentDate, config.majorUnit);
+
+        if (isMajor) {
+          // Major tick
+          const tick = document.createElement('div');
+          tick.className = 'axis-tick major';
+          tick.style.left = `${position}px`;
+          axis.appendChild(tick);
+
+          // Label
+          const labelText = formatAxisLabel(currentDate, config.majorUnit);
+          if (labelText !== lastMajorLabel) {
+            const label = document.createElement('div');
+            label.className = 'axis-label major';
+            label.style.left = `${position}px`;
+            label.textContent = labelText;
+            axis.appendChild(label);
+            lastMajorLabel = labelText;
+          }
+
+          // Grid line
+          const gridLine = document.createElement('div');
+          gridLine.className = 'grid-line major';
+          gridLine.style.left = `${position}px`;
+          ticketsLayer.insertBefore(gridLine, ticketsLayer.firstChild);
+        }
+
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+    }
+
+    function positionTickets(config) {
+      const tickets = document.querySelectorAll('.timeline-ticket');
+      const msPerDay = 24 * 60 * 60 * 1000;
+
+      // Track occupied positions for vertical stacking
+      const occupiedSlots = [];
+
+      tickets.forEach((ticket) => {
+        if (ticket.style.display === 'none') return;
+        const createdAt = new Date(ticket.dataset.createdAt);
+        const daysFromStart = (createdAt - earliestDate) / msPerDay;
+        const leftPosition = daysFromStart * config.pixelsPerDay;
+
+        // Find available row (avoid overlap)
+        let row = 0;
+        for (let r = 0; r < TimelineConfig.maxRows; r++) {
+          const occupied = occupiedSlots.some(slot =>
+            slot.row === r &&
+            leftPosition < slot.right + TimelineConfig.cardGap &&
+            leftPosition + TimelineConfig.cardWidth > slot.left - TimelineConfig.cardGap
+          );
+          if (!occupied) {
+            row = r;
+            break;
+          }
+          row = r + 1;
+        }
+
+        // Wrap rows if exceeding max
+        row = row % TimelineConfig.maxRows;
+
+        // Record this slot
+        occupiedSlots.push({
+          left: leftPosition,
+          right: leftPosition + TimelineConfig.cardWidth,
+          row: row
+        });
+
+        // Position the card
+        ticket.style.left = `${leftPosition}px`;
+        ticket.style.top = `${row * TimelineConfig.rowHeight}px`;
+        ticket.style.zIndex = TimelineConfig.maxRows - row;
+      });
+    }
+
+    function positionTodayMarker(config) {
+      const today = new Date();
+      const msPerDay = 24 * 60 * 60 * 1000;
+      const daysFromStart = (today - earliestDate) / msPerDay;
+      const leftPosition = daysFromStart * config.pixelsPerDay;
+
+      if (leftPosition >= 0 && leftPosition <= parseFloat(content.style.width)) {
+        todayMarker.style.left = `${leftPosition}px`;
+        todayMarker.style.display = 'block';
+      } else {
+        todayMarker.style.display = 'none';
+      }
+    }
+
+    function generateMinimapDots(config) {
+      // Clear existing dots (but not viewport)
+      minimap.querySelectorAll('.minimap-dot').forEach(d => d.remove());
+
+      const tickets = document.querySelectorAll('.timeline-ticket');
+      const msPerDay = 24 * 60 * 60 * 1000;
+      const totalDays = (latestDate - earliestDate) / msPerDay;
+
+      tickets.forEach(ticket => {
+        if (ticket.style.display === 'none') return;
+        const createdAt = new Date(ticket.dataset.createdAt);
+        const daysFromStart = (createdAt - earliestDate) / msPerDay;
+        const percent = (daysFromStart / totalDays) * 100;
+
+        const dot = document.createElement('div');
+        dot.className = 'minimap-dot absolute w-1.5 h-full rounded-full';
+        dot.style.left = `${percent}%`;
+        dot.style.backgroundColor = getStatusColor(ticket.dataset.status);
+        dot.style.opacity = '0.7';
+        minimap.appendChild(dot);
+      });
+    }
+
+    function getStatusColor(status) {
+      const colors = {
+        backlog: '#6b7280',
+        assigned: '#3b82f6',
+        in_progress: '#f59e0b',
+        review: '#8b5cf6',
+        incomplete: '#ef4444',
+        done: '#10b981'
+      };
+      return colors[status] || '#6b7280';
+    }
+
+    function shouldShowMajorTick(date, unit) {
+      switch (unit) {
+        case 'month': return date.getDate() === 1;
+        case 'week': return date.getDay() === 0;
+        case 'day': return true;
+        case 'hour': return date.getHours() % 6 === 0;
+        default: return false;
+      }
+    }
+
+    function formatAxisLabel(date, unit) {
+      switch (unit) {
+        case 'month': return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        case 'week': return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        case 'day': return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        case 'hour': return date.toLocaleTimeString('en-US', { hour: 'numeric', hour12: true });
+        default: return '';
+      }
+    }
+
+    // Navigation Functions
+    function scrollTimeline(direction) {
+      const config = TimelineConfig.scales[currentScale];
+      const scrollAmount = container.clientWidth * 0.7;
+      const msPerDay = 24 * 60 * 60 * 1000;
+
+      switch (direction) {
+        case 'left':
+          container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+          break;
+        case 'right':
+          container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+          break;
+        case 'start':
+          container.scrollTo({ left: 0, behavior: 'smooth' });
+          break;
+        case 'end':
+          container.scrollTo({ left: content.scrollWidth, behavior: 'smooth' });
+          break;
+        case 'today':
+          const today = new Date();
+          const daysFromStart = (today - earliestDate) / msPerDay;
+          const targetPosition = daysFromStart * config.pixelsPerDay - container.clientWidth / 2;
+          container.scrollTo({ left: Math.max(0, targetPosition), behavior: 'smooth' });
+          break;
+      }
+    }
+
+    function jumpToDate() {
+      const dateInput = document.getElementById('date-jump');
+      const targetDate = new Date(dateInput.value + 'T12:00:00');
+      const config = TimelineConfig.scales[currentScale];
+      const msPerDay = 24 * 60 * 60 * 1000;
+
+      const daysFromStart = (targetDate - earliestDate) / msPerDay;
+      const targetPosition = daysFromStart * config.pixelsPerDay - container.clientWidth / 2;
+
+      container.scrollTo({ left: Math.max(0, targetPosition), behavior: 'smooth' });
+    }
+
+    function changeScale(newScale) {
+      // Remember current center position
+      const config = TimelineConfig.scales[currentScale];
+      const msPerDay = 24 * 60 * 60 * 1000;
+      const centerX = container.scrollLeft + container.clientWidth / 2;
+      const daysFromStart = centerX / config.pixelsPerDay;
+      const centerDate = new Date(earliestDate.getTime() + daysFromStart * msPerDay);
+
+      currentScale = newScale;
+
+      // Update URL
+      const url = new URL(window.location.href);
+      url.searchParams.set('scale', newScale);
+      window.history.replaceState({}, '', url);
+
+      // Update button states
+      document.querySelectorAll('.scale-btn').forEach(btn => {
+        btn.classList.toggle('btn-active', btn.dataset.scale === newScale);
+      });
+
+      // Clear grid lines
+      ticketsLayer.querySelectorAll('.grid-line').forEach(g => g.remove());
+
+      // Reinitialize
+      initTimeline();
+
+      // Scroll to maintain center
+      const newConfig = TimelineConfig.scales[currentScale];
+      const newDaysFromStart = (centerDate - earliestDate) / msPerDay;
+      const targetPosition = newDaysFromStart * newConfig.pixelsPerDay - container.clientWidth / 2;
+      container.scrollTo({ left: Math.max(0, targetPosition), behavior: 'instant' });
+
+      updateMinimap();
+    }
+
+    // Minimap
+    function updateMinimap() {
+      const contentWidth = parseFloat(content.style.width) || content.scrollWidth;
+      const viewportPercent = Math.min(100, (container.clientWidth / contentWidth) * 100);
+      const scrollableWidth = contentWidth - container.clientWidth;
+      const scrollPercent = scrollableWidth > 0 ? (container.scrollLeft / scrollableWidth) * 100 : 0;
+      const leftPercent = scrollPercent * (100 - viewportPercent) / 100;
+
+      minimapViewport.style.width = `${viewportPercent}%`;
+      minimapViewport.style.left = `${leftPercent}%`;
+    }
+
+    // Project filter
+    function filterByProject(projectId) {
+      const url = new URL(window.location.href);
+      if (projectId) {
+        url.searchParams.set('project_id', projectId);
+      } else {
+        url.searchParams.delete('project_id');
+      }
+      window.location.href = url.toString();
+    }
+
+    // --- Search + Date Range filtering (client-side) ---
+    function applyTimelineFilters() {
+      const query = (document.getElementById('ticket-search')?.value || '').trim().toLowerCase();
+      const startVal = document.getElementById('filter-date-start')?.value;
+      const endVal = document.getElementById('filter-date-end')?.value;
+      const start = startVal ? new Date(startVal + 'T00:00:00') : null;
+      const end = endVal ? new Date(endVal + 'T23:59:59.999') : null;
+
+      let visibleCount = 0;
+      document.querySelectorAll('.timeline-ticket').forEach(card => {
+        const title = (card.dataset.ticketTitle || '').toLowerCase();
+        const description = (card.dataset.ticketDescription || '').toLowerCase();
+        const created = card.dataset.createdAt ? new Date(card.dataset.createdAt) : null;
+
+        let visible = true;
+        if (query) {
+          visible = title.includes(query) || description.includes(query);
+        }
+        if (visible && start && created) visible = created >= start;
+        if (visible && end && created) visible = created <= end;
+
+        card.style.display = visible ? '' : 'none';
+        if (visible) visibleCount++;
+      });
+
+      // Reflow the timeline so layout/minimap reflect only visible cards
+      const config = TimelineConfig.scales[currentScale];
+      positionTickets(config);
+      generateMinimapDots(config);
+      updateDateRangeLabel();
+
+      const countEl = document.getElementById('filter-result-count');
+      if (countEl) {
+        const filtering = query || start || end;
+        countEl.textContent = filtering ? `${visibleCount} matching ticket${visibleCount !== 1 ? 's' : ''}` : '';
+      }
+    }
+
+    // Date-range popover: label, toggle, outside-click close
+    function updateDateRangeLabel() {
+      const s = document.getElementById('filter-date-start')?.value;
+      const e = document.getElementById('filter-date-end')?.value;
+      const label = document.getElementById('date-range-label');
+      const btn = document.getElementById('date-range-btn');
+      if (!label) return;
+      if (s && e) label.textContent = `${s} → ${e}`;
+      else if (s) label.textContent = `From ${s}`;
+      else if (e) label.textContent = `Until ${e}`;
+      else label.textContent = 'Any date';
+      if (btn) btn.classList.toggle('btn-active', !!(s || e));
+    }
+
+    function toggleDateRange(event) {
+      if (event) event.stopPropagation();
+      document.getElementById('date-range-panel')?.classList.toggle('hidden');
+    }
+
+    document.addEventListener('click', (e) => {
+      const panel = document.getElementById('date-range-panel');
+      if (!panel || panel.classList.contains('hidden')) return;
+      if (!panel.contains(e.target) && !e.target.closest('#date-range-btn')) {
+        panel.classList.add('hidden');
+      }
+    });
+
+    function clearTimelineFilters() {
+      const search = document.getElementById('ticket-search');
+      const startEl = document.getElementById('filter-date-start');
+      const endEl = document.getElementById('filter-date-end');
+      if (search) search.value = '';
+      if (startEl) startEl.value = '';
+      if (endEl) endEl.value = '';
+      applyTimelineFilters();
+    }
+
+    // --- Copy just the ticket title to the clipboard ---
+    function copyTextToClipboard(text) {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.top = '0';
+      textarea.style.left = '0';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      let success = false;
+      try {
+        success = document.execCommand('copy');
+      } catch (err) {
+        console.error('Copy failed:', err);
+      }
+      document.body.removeChild(textarea);
+      return success;
+    }
+
+    function copyTitleToClipboard(btn) {
+      const card = btn.closest('.timeline-ticket') || btn.closest('.kanban-card');
+      if (!card) return;
+      const unescape = (str) => str ? str.replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\'/g, "'").replace(/\\"/g, '"') : '';
+      const title = unescape(card.dataset.ticketTitle || '');
+
+      const success = copyTextToClipboard(title);
+      const icon = btn.querySelector('i');
+      if (icon) {
+        if (success) {
+          icon.className = 'fas fa-check text-green-600 text-xs';
+          toastManager.show(`Copied title to clipboard`, 'success', 2000);
+        } else {
+          icon.className = 'fas fa-times text-red-600 text-xs';
+          toastManager.show('Copy failed - try again', 'error', 2000);
+        }
+        setTimeout(() => { icon.className = 'fas fa-copy text-gray-400 text-xs'; }, 2000);
+      }
+    }
+
+    // Edit Modal Functions
+    function openEditModal(ticketId) {
+      fetch(`<%= llama_bot_rails.tickets_path %>/${ticketId}.json`)
+        .then(response => response.json())
+        .then(ticket => {
+          document.getElementById('editTicketId').value = ticket.id;
+          document.getElementById('editTitle').value = ticket.title || '';
+          document.getElementById('editDescription').value = ticket.description || '';
+          document.getElementById('editProject').value = ticket.project_id || '';
+          document.getElementById('editStatus').value = ticket.status || '';
+          document.getElementById('editNotes').value = ticket.notes || '';
+          document.getElementById('viewTicketLink').href = `<%= llama_bot_rails.tickets_path %>/${ticket.id}`;
+
+          document.getElementById('editModal').showModal();
+        })
+        .catch(error => {
+          console.error('Error loading ticket:', error);
+          toastManager.show('Failed to load ticket', 'error', 3000);
+        });
+    }
+
+    function saveTicket() {
+      const ticketId = document.getElementById('editTicketId').value;
+      const title = document.getElementById('editTitle').value;
+      const description = document.getElementById('editDescription').value;
+      const projectId = document.getElementById('editProject').value;
+      const status = document.getElementById('editStatus').value;
+      const notes = document.getElementById('editNotes').value;
+
+      if (!status || status.trim() === '') {
+        toastManager.show('Please select a status', 'error', 3000);
+        return;
+      }
+
+      const payload = {
+        ticket: {
+          title,
+          description,
+          project_id: projectId || null,
+          status,
+          notes
+        }
+      };
+
+      fetch(`<%= llama_bot_rails.tickets_path %>/${ticketId}.json`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
+        body: JSON.stringify(payload)
+      })
+      .then(response => {
+        if (!response.ok) throw new Error(`Server returned ${response.status}`);
+        return response.json();
+      })
+      .then(data => {
+        toastManager.show('Ticket saved successfully!', 'success', 3000);
+        document.getElementById('editModal').close();
+        setTimeout(() => location.reload(), 1000);
+      })
+      .catch(error => {
+        console.error('Error saving ticket:', error);
+        toastManager.show('Failed to save ticket: ' + error.message, 'error', 3000);
+      });
+    }
+  </script>
+</body>
+</html>

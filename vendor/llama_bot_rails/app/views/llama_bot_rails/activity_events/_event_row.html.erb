@@ -1,0 +1,34 @@
+<%# One row in the activity feed: the human sentence first, mechanism second. %>
+<div class="flex items-start gap-4 py-4 border-b border-base-300 last:border-0" data-activity-event="<%= event.id %>">
+  <div class="text-xs text-gray-400 w-20 shrink-0 pt-1 tabular-nums">
+    <%= llama_activity_time(event.occurred_at) %>
+  </div>
+
+  <div class="w-8 shrink-0 text-center pt-1">
+    <i class="fas <%= llama_activity_icon(event) %> <%= event.human ? 'text-primary' : 'text-gray-400' %>"></i>
+  </div>
+
+  <div class="flex-1 min-w-0">
+    <div class="font-medium">
+      <%= llama_activity_sentence(event) %>
+    </div>
+
+    <% if (cause = llama_activity_cause(event)) %>
+      <div class="text-sm text-gray-500 mt-1">
+        Triggered by <span class="font-mono"><%= cause %></span>
+      </div>
+    <% end %>
+
+    <div class="flex items-center gap-2 mt-2 flex-wrap text-xs">
+      <span class="badge badge-ghost badge-sm"><%= llama_activity_source_label(event) %></span>
+      <span class="badge badge-outline badge-sm font-mono"><%= event.event_type %></span>
+      <% if event.changed_records_count > 1 %>
+        <span class="badge badge-sm"><%= pluralize(event.changed_records_count, "record") %> changed</span>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="shrink-0 pt-1">
+    <%= link_to "Details", activity_event_path(event), class: "btn btn-ghost btn-xs" %>
+  </div>
+</div>

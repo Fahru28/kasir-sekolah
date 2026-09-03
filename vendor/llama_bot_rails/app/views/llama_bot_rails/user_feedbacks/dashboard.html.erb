@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html data-theme="light">
+<head>
+  <title>Feedback Dashboard - LlamaBotRails</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <%= csrf_meta_tags %>
+</head>
+<body>
+
+  <div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8">
+    <div class="max-w-7xl mx-auto">
+      <!-- Header -->
+      <div class="mb-8 flex items-center justify-between">
+        <div>
+          <h1 class="text-4xl font-bold text-gray-800 flex items-center gap-3">
+            <i class="fas fa-chart-bar text-blue-600"></i>
+            Feedback Dashboard
+          </h1>
+          <p class="text-gray-600 mt-2">Overview of all user feedback</p>
+        </div>
+        <div class="flex gap-2">
+          <%= link_to kanban_user_feedbacks_path, class: "btn btn-primary btn-sm" do %>
+            <i class="fas fa-columns"></i> Kanban Board
+          <% end %>
+          <%= link_to user_feedbacks_path, class: "btn btn-outline btn-sm" do %>
+            <i class="fas fa-list"></i> List View
+          <% end %>
+          <%= link_to tags_path, class: "btn btn-outline btn-sm" do %>
+            <i class="fas fa-tags"></i> Manage Tags
+          <% end %>
+        </div>
+      </div>
+
+      <!-- Stats Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow-sm p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-gray-500 text-sm">Total Feedback</p>
+              <p class="text-3xl font-bold text-gray-800"><%= @stats[:total] %></p>
+            </div>
+            <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+              <i class="fas fa-comments text-blue-600 text-xl"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-gray-500 text-sm">Open</p>
+              <p class="text-3xl font-bold text-amber-600"><%= @stats[:open] %></p>
+            </div>
+            <div class="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
+              <i class="fas fa-exclamation-circle text-amber-600 text-xl"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-gray-500 text-sm">Resolved</p>
+              <p class="text-3xl font-bold text-green-600"><%= @stats[:resolved] %></p>
+            </div>
+            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+              <i class="fas fa-check-circle text-green-600 text-xl"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-gray-500 text-sm">High Priority</p>
+              <p class="text-3xl font-bold text-red-600"><%= @stats[:high_priority] %></p>
+            </div>
+            <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+              <i class="fas fa-fire text-red-600 text-xl"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Kanban Board -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <% LlamaBotRails::UserFeedback::STATUSES.each do |status| %>
+          <div class="bg-white rounded-lg shadow-sm overflow-hidden flex flex-col">
+            <!-- Column Header -->
+            <div class="bg-gradient-to-r from-gray-700 to-gray-600 px-4 py-3 text-white">
+              <div class="flex items-center gap-2 mb-1">
+                <i class="fas <%= feedback_status_icon(status) %>"></i>
+                <h2 class="font-semibold text-sm uppercase tracking-wide"><%= status.humanize %></h2>
+              </div>
+              <span class="inline-block bg-yellow-300 text-xs px-2 py-1 rounded-full text-gray-900 font-semibold">
+                <%= @feedbacks_by_status[status]&.count || 0 %> items
+              </span>
+            </div>
+
+            <!-- Cards Container -->
+            <div class="flex-1 p-3 bg-gray-50 overflow-y-auto space-y-2" style="min-height: 300px; max-height: 500px;">
+              <% (@feedbacks_by_status[status] || []).each do |feedback| %>
+                <div class="bg-white rounded-lg p-3 shadow-sm border-l-4 border-blue-500 hover:shadow-md transition-shadow">
+                  <div class="flex items-start justify-between mb-2">
+                    <span class="badge badge-xs <%= feedback_type_badge_class(feedback.feedback_type) %>">
+                      <%= feedback.feedback_type %>
+                    </span>
+                    <span class="badge badge-xs <%= priority_badge_class(feedback.priority) %>">
+                      <%= priority_label(feedback.priority) %>
+                    </span>
+                  </div>
+                  <h3 class="font-semibold text-gray-800 text-sm line-clamp-2 mb-2">
+                    <%= link_to feedback.title, user_feedback_path(feedback), class: "hover:text-blue-600" %>
+                  </h3>
+                  <div class="text-xs text-gray-500">
+                    <span><%= feedback.display_author %></span>
+                    <span class="mx-1">-</span>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <span><%= feedback.created_at.strftime('%a') %> - <%= time_ago_in_words(feedback.created_at) %> ago</span>
+                  </div>
+                </div>
+              <% end %>
+
+              <% if (@feedbacks_by_status[status] || []).empty? %>
+                <div class="flex items-center justify-center h-24 text-gray-400">
+                  <div class="text-center">
+                    <i class="fas fa-inbox text-xl mb-1"></i>
+                    <p class="text-xs">No items</p>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+
+      <!-- Recent Feedback & Popular Tags -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+        <!-- Recent Feedback -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+          <h3 class="text-lg font-semibold text-gray-800 mb-4">
+            <i class="fas fa-clock mr-2 text-blue-600"></i>Recent Feedback
+          </h3>
+          <div class="space-y-3">
+            <% @recent_feedbacks.each do |feedback| %>
+              <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                <div class="flex-1">
+                  <p class="font-medium text-gray-800 text-sm">
+                    <%= link_to truncate(feedback.title, length: 40), user_feedback_path(feedback), class: "hover:text-blue-600" %>
+                  </p>
+                  <p class="text-xs text-gray-500"><%= feedback.display_author %> - <%= feedback.created_at.strftime('%a') %>, <%= time_ago_in_words(feedback.created_at) %> ago</p>
+                </div>
+                <span class="badge badge-sm <%= feedback_status_badge_class(feedback.status) %>"><%= feedback.status %></span>
+              </div>
+            <% end %>
+          </div>
+        </div>
+
+        <!-- Popular Tags -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+          <h3 class="text-lg font-semibold text-gray-800 mb-4">
+            <i class="fas fa-tags mr-2 text-blue-600"></i>Popular Tags
+          </h3>
+          <div class="flex flex-wrap gap-2">
+            <% @tags.each do |tag| %>
+              <span class="badge badge-lg" style="<%= tag_style(tag) %>">
+                <%= tag.name %> (<%= tag.usage_count %>)
+              </span>
+            <% end %>
+            <% if @tags.empty? %>
+              <p class="text-gray-500 text-sm">No tags yet</p>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

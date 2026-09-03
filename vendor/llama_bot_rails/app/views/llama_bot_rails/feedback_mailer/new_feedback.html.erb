@@ -1,0 +1,17 @@
+<h2>New feedback submitted</h2>
+
+<p><strong><%= @feedback.title.presence || "(no title)" %></strong></p>
+
+<% if @feedback.feedback_type.present? %>
+  <p>Type: <%= @feedback.feedback_type %></p>
+<% end %>
+
+<p>From: <%= @feedback.display_author %></p>
+
+<% if @feedback.description.present? %>
+  <%= simple_format(@feedback.description) %>
+<% end %>
+
+<% if @url %>
+  <p><a href="<%= @url %>">View feedback</a></p>
+<% end %>

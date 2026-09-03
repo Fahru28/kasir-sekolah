@@ -1,0 +1,139 @@
+<% content_for :title, "User Requests - LlamaBotRails" %>
+
+  <div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8">
+    <div class="max-w-6xl mx-auto">
+      <%# No page title: the Inbox tab bar above already names this page. Only
+          the hint the title carried is kept. %>
+      <div class="mb-4">
+        <p class="text-gray-600">View and manage feature requests and suggestions</p>
+      </div>
+
+      <!-- Controls -->
+      <div class="mb-6 flex items-center gap-4 flex-wrap">
+        <% if can?(:view_all_requests) %>
+          <%= link_to dashboard_user_requests_path, class: "btn btn-outline btn-sm" do %>
+            <i class="fas fa-chart-bar"></i> Dashboard
+          <% end %>
+        <% end %>
+
+        <!-- Status Filter -->
+        <div class="flex items-center gap-2">
+          <label class="text-sm text-gray-600">Status:</label>
+          <select class="select select-bordered select-sm" onchange="filterByParam('status', this.value)">
+            <option value="">All Statuses</option>
+            <% LlamaBotRails::UserRequest::STATUSES.each do |status| %>
+              <option value="<%= status %>" <%= params[:status] == status ? 'selected' : '' %>>
+                <%= status.humanize %>
+              </option>
+            <% end %>
+          </select>
+        </div>
+
+        <!-- Type Filter -->
+        <div class="flex items-center gap-2">
+          <label class="text-sm text-gray-600">Type:</label>
+          <select class="select select-bordered select-sm" onchange="filterByParam('request_type', this.value)">
+            <option value="">All Types</option>
+            <% LlamaBotRails::UserRequest::REQUEST_TYPES.each do |type| %>
+              <option value="<%= type %>" <%= params[:request_type] == type ? 'selected' : '' %>>
+                <%= type.humanize %>
+              </option>
+            <% end %>
+          </select>
+        </div>
+
+        <% if can?(:submit_request) %>
+          <%= link_to new_user_request_path, class: "btn btn-primary btn-sm ml-auto" do %>
+            <i class="fas fa-plus"></i> Submit Request
+          <% end %>
+        <% end %>
+      </div>
+
+      <!-- Requests List -->
+      <div class="space-y-4">
+        <% if @requests.any? %>
+          <% @requests.each do |request| %>
+            <div class="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow">
+              <div class="flex items-start justify-between">
+                <div class="flex-1">
+                  <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-outline">
+                      <i class="fas <%= request_type_icon(request.request_type) %> mr-1"></i>
+                      <%= request.request_type.humanize %>
+                    </span>
+                    <span class="badge <%= request_status_badge_class(request.status) %>">
+                      <i class="fas <%= request_status_icon(request.status) %> mr-1"></i>
+                      <%= request.status.humanize %>
+                    </span>
+                    <span class="badge <%= priority_badge_class(request.priority) %>">
+                      <%= priority_label(request.priority) %>
+                    </span>
+                  </div>
+
+                  <h3 class="text-lg font-semibold text-gray-800 mb-2">
+                    <%= link_to request.title, user_request_path(request), class: "hover:text-blue-600" %>
+                  </h3>
+
+                  <p class="text-gray-600 text-sm line-clamp-2 mb-3">
+                    <%= truncate(request.description, length: 200) %>
+                  </p>
+
+                  <div class="flex items-center gap-4 text-xs text-gray-500">
+                    <span><i class="fas fa-user mr-1"></i> <%= request.display_author %></span>
+                    <span><i class="fas fa-clock mr-1"></i> <%= time_ago_in_words(request.created_at) %> ago</span>
+                    <% if request.attachments.any? %>
+                      <span><i class="fas fa-paperclip mr-1"></i> <%= request.attachments.count %> attachment(s)</span>
+                    <% end %>
+                    <% if request.comments.any? %>
+                      <span><i class="fas fa-comment mr-1"></i> <%= request.comments.count %> comment(s)</span>
+                    <% end %>
+                  </div>
+
+                  <% if request.tags.any? %>
+                    <div class="flex flex-wrap gap-1 mt-3">
+                      <% request.tags.each do |tag| %>
+                        <span class="badge badge-sm" style="<%= tag_style(tag) %>"><%= tag.name %></span>
+                      <% end %>
+                    </div>
+                  <% end %>
+                </div>
+
+                <div class="flex flex-col gap-2 ml-4">
+                  <%= link_to user_request_path(request), class: "btn btn-ghost btn-sm" do %>
+                    <i class="fas fa-eye"></i>
+                  <% end %>
+                  <% if can?(:moderate_feedback) || request.user_id == current_llama_user&.id %>
+                    <%= link_to edit_user_request_path(request), class: "btn btn-ghost btn-sm" do %>
+                      <i class="fas fa-edit"></i>
+                    <% end %>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+          <% end %>
+        <% else %>
+          <div class="bg-white rounded-lg shadow-sm p-12 text-center">
+            <i class="fas fa-lightbulb text-4xl text-gray-300 mb-4"></i>
+            <p class="text-gray-500">No requests found</p>
+            <% if can?(:submit_request) %>
+              <%= link_to new_user_request_path, class: "btn btn-primary btn-sm mt-4" do %>
+                <i class="fas fa-plus"></i> Submit Request
+              <% end %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function filterByParam(param, value) {
+      const url = new URL(window.location.href);
+      if (value) {
+        url.searchParams.set(param, value);
+      } else {
+        url.searchParams.delete(param);
+      }
+      window.location.href = url.toString();
+    }
+  </script>

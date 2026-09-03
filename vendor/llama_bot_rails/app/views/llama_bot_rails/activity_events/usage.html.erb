@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html data-theme="light">
+<head>
+  <title><%= request.host %> | Usage</title>
+  <%= render "head" %>
+</head>
+<body class="bg-base-200 min-h-screen">
+  <div class="max-w-5xl mx-auto px-4 py-8">
+    <%= render "nav", current: :usage, title: "Usage",
+          subtitle: "Whether people are actually using this application" %>
+
+    <%= render "time_zone_note" %>
+
+    <%
+      trend =
+        if @metrics[:actions_prev_30d].zero?
+          nil
+        else
+          ((@metrics[:actions_30d] - @metrics[:actions_prev_30d]) * 100.0 / @metrics[:actions_prev_30d]).round
+        end
+    %>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <% [
+           [ "Active today", @metrics[:active_today], "people" ],
+           [ "Active this week", @metrics[:active_7d], "people" ],
+           [ "Meaningful actions — 7 days", @metrics[:actions_7d], nil ],
+           [ "Meaningful actions — 30 days", @metrics[:actions_30d], nil ]
+         ].each do |label, value, unit| %>
+        <div class="card bg-base-100 shadow-sm">
+          <div class="card-body py-4">
+            <div class="text-xs uppercase tracking-wide text-gray-400"><%= label %></div>
+            <div class="text-3xl font-bold"><%= number_with_delimiter(value) %></div>
+            <% if unit %><div class="text-xs text-gray-400"><%= unit %></div><% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div class="card bg-base-100 shadow-sm">
+        <div class="card-body py-4">
+          <div class="text-xs uppercase tracking-wide text-gray-400">Last meaningful activity</div>
+          <div class="text-lg font-semibold"><%= llama_activity_ago(@metrics[:last_activity]) %></div>
+        </div>
+      </div>
+      <div class="card bg-base-100 shadow-sm">
+        <div class="card-body py-4">
+          <div class="text-xs uppercase tracking-wide text-gray-400">Active days (last 14)</div>
+          <div class="text-lg font-semibold"><%= @metrics[:active_days_14] %> / 14</div>
+        </div>
+      </div>
+      <div class="card bg-base-100 shadow-sm">
+        <div class="card-body py-4">
+          <div class="text-xs uppercase tracking-wide text-gray-400">Trend vs previous 30 days</div>
+          <div class="text-lg font-semibold">
+            <% if trend.nil? %>
+              <span class="text-gray-400">no baseline</span>
+            <% else %>
+              <span class="<%= trend.negative? ? 'text-error' : 'text-success' %>">
+                <%= trend.positive? ? "+#{trend}" : trend %>%
+              </span>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <%# Raw signals, not a single invented "health score" — see §14 of the memo. %>
+    <p class="text-xs text-gray-400 mb-8">
+      Counts cover human actions only. <%= number_with_delimiter(@metrics[:system_events_30d]) %>
+      automated events in the last 30 days are excluded: a job rewriting rows is not adoption.
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-400 mb-2">Most used workflows (30 days)</h2>
+        <div class="card bg-base-100 shadow-sm">
+          <div class="card-body py-4">
+            <% if @workflows.empty? %>
+              <p class="text-sm text-gray-400">Nothing recorded yet.</p>
+            <% else %>
+              <% @workflows.each do |event_type, count| %>
+                <div class="flex items-center justify-between py-1">
+                  <span class="font-mono text-sm truncate"><%= event_type %></span>
+                  <span class="badge badge-ghost"><%= number_with_delimiter(count) %></span>
+                </div>
+              <% end %>
+            <% end %>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-400 mb-2">People</h2>
+        <div class="card bg-base-100 shadow-sm">
+          <div class="card-body py-4">
+            <% if @users.empty? %>
+              <p class="text-sm text-gray-400">No users found.</p>
+            <% else %>
+              <%# Each row is a way in: the count answers "how much", the link
+                  answers "doing what" by opening the feed filtered to them. %>
+              <% @users.each do |row| %>
+                <%= link_to activity_path(actor_id: row[:user].id, category: "human"),
+                      class: "flex items-center justify-between py-2 border-b border-base-200 last:border-0 hover:bg-base-200 -mx-2 px-2 rounded" do %>
+                  <div class="min-w-0">
+                    <div class="font-medium truncate"><%= row[:label] %></div>
+                    <div class="text-xs text-gray-400">
+                      <% if row[:last_active].nil? %>
+                        Never activated
+                      <% else %>
+                        Last active <%= llama_activity_ago(row[:last_active]) %>
+                      <% end %>
+                    </div>
+                  </div>
+                  <div class="text-right shrink-0 ml-3">
+                    <div class="font-semibold"><%= row[:actions_7d] %></div>
+                    <div class="text-xs text-gray-400">this week</div>
+                  </div>
+                <% end %>
+              <% end %>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

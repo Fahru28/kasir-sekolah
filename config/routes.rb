@@ -1,0 +1,93 @@
+Rails.application.routes.draw do
+  devise_for :users, controllers: { registrations: 'users/registrations' }
+  resources :users do
+    member do
+      get :generate_profile_pic, action: :generate_profile_pic_form
+      post :generate_profile_pic
+      get :generate_bio_audio, action: :generate_bio_audio_form
+      post :generate_bio_audio
+    end
+  end
+  # Agent-facing JSON API consumed by the user_api_agent LangGraph agent through the
+  # llamapress_api layer (Authorization: LlamaBot <token>). See Api::UsersController.
+  namespace :api do
+    # `only:` is a real part of the agent's capability ceiling, not just tidiness:
+    # a route that doesn't exist 404s before any controller (and so before
+    # `llama_bot_allow`) runs. Adding a verb here EXPANDS what the agent can do —
+    # pair every addition with a matching `llama_bot_allow` in the controller.
+    resources :users, only: [:index, :show, :create]
+  end
+
+  mount LlamaBotRails::Engine => "/llama_bot"
+  # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
+
+  # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
+  # Can be used by load balancers and uptime monitors to verify that the app is live.
+  get "up" => "rails/health#show", as: :rails_health_check
+
+  # Render dynamic PWA files from app/views/pwa/*
+  get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
+  get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
+
+  root "dashboard#index"
+  get "dashboard", to: "dashboard#index"
+  get "kasir", to: "kasir#index"
+  post "kasir/add_item", to: "kasir#add_item"
+  post "kasir/remove_item", to: "kasir#remove_item"
+  post "kasir/clear_cart", to: "kasir#clear_cart"
+  post "kasir/checkout", to: "kasir#checkout"
+  resources :students do
+    collection do
+      get :import_form
+      post :import
+      get :template
+    end
+  end
+  resources :products do
+    collection do
+      get :import_form
+      post :import
+      get :template
+    end
+  end
+  resources :stock_entries, only: [:index, :create, :destroy] do
+    collection do
+      get :import_form
+      post :import
+      get :template
+    end
+  end
+  resources :sales, only: [:index, :show, :destroy] do
+    resources :debt_payments, only: [:create, :destroy]
+  end
+  get "piutang", to: "piutangs#index"
+  get "laporan", to: "reports#daily", as: :daily_reports
+  get "welcome_old", to: "public#welcome"
+  # root "prototypes#show", page: "home"
+  get "home" => "public#home"
+  get "chat" => "public#chat"
+  get "install" => "public#install"
+  get "brand" => "public#brand", as: :brand
+
+  namespace :admin do
+    root to: "dashboard#index"
+    
+    resources :users do
+      member do
+        post :impersonate
+      end
+    end
+  end
+  
+  post "/stop_impersonating", to: "application#stop_impersonating"
+
+  # Recall.ai webhook
+  post "/webhooks/recall", to: "webhooks#recall"
+
+  get "/prototypes/*page", to: "prototypes#show"
+
+  # TEMPORARY — manual smoke test for Rails error telemetry. Delete after use.
+  get "/telemetry_boom", to: "telemetry_boom#show"
+  # Defines the root path route ("/")
+  # root "posts#index"
+end

@@ -1,0 +1,187 @@
+<% if defined?(javascript_importmap_tags) %> <!-- Rails 7+ -->
+  <%= javascript_importmap_tags %>
+<% else %> <!-- Rails 6 -->
+  <%= javascript_include_tag "application" %>
+<% end %>
+
+<%= javascript_include_tag "llama_bot_rails/application" %>
+<% if defined?(action_cable_meta_tag) %>
+  <%= action_cable_meta_tag %>
+<% end %>
+<!-- Add Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Add marked.js for markdown parsing -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<!-- Font Awesome for icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+<div class="flex flex-col h-screen bg-gray-100">
+  <!-- Chat Container -->
+  <div class="flex flex-col flex-grow bg-white shadow-lg rounded-lg mx-2 md:mx-auto my-2 max-w-4xl" data-llamabot="chat-container">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between border-b p-4">
+      <div class="flex items-center space-x-4">
+        <button data-llamabot="hamburger-menu" class="p-1 rounded-full hover:bg-gray-200 focus:outline-none" title="Toggle sidebar">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+        </button>
+        <div class="flex items-center">
+          <img src="https://llamapress-ai-image-uploads.s3.us-west-2.amazonaws.com/rz0iwirzz2cwnkd3eoe1uplmzvad" alt="LlamaBot Logo" class="h-8 w-8">
+          <div data-llamabot="connection-status" class="ml-2 h-3 w-3 rounded-full bg-yellow-400"></div>
+        </div>
+        <h1 class="text-xl font-bold">Leo the Llama</h1>
+      </div>
+    </div>
+
+    <!-- Slide-out drawer for threads -->
+    <div data-llamabot="menu-drawer" class="menu-drawer">
+      <div class="drawer-content p-4">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="font-bold text-lg">Conversations</h3>
+          <button data-llamabot="new-thread-btn" class="px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700" title="Start new conversation">
+            <i class="fa-solid fa-plus"></i>
+          </button>
+        </div>
+        <div data-llamabot="thread-list" class="space-y-2">
+          <!-- Thread items will be populated dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Message History -->
+    <div data-llamabot="message-history" class="flex-grow overflow-y-auto p-4 space-y-4">
+      <!-- Messages will be added here dynamically -->
+    </div>
+
+    <!-- Thinking indicator -->
+    <div data-llamabot="thinking-area" class="hidden p-4 text-center">
+      <span class="inline-flex items-center text-gray-600">
+        Leo is thinking<span class="loading-dots"></span>
+      </span>
+    </div>
+
+    <!-- Suggested Prompts -->
+    <div data-llamabot="suggested-prompts" class="p-4 border-t border-gray-200">
+      <div class="text-sm text-gray-600 mb-2">Quick actions:</div>
+      <div class="space-y-2">
+        <div class="flex flex-wrap gap-2">
+          <button data-llamabot="suggested-prompt" class="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-full text-gray-700">What's the weather like today?</button>
+          <button data-llamabot="suggested-prompt" class="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-full text-gray-700">Tell me a fun fact.</button>
+          <button data-llamabot="suggested-prompt" class="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-full text-gray-700">How do I make pancakes?</button>
+          <button data-llamabot="suggested-prompt" class="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-full text-gray-700">What's a good movie to watch?</button>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button data-llamabot="suggested-prompt" class="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-full text-gray-700">Give me a motivational quote.</button>
+          <button data-llamabot="suggested-prompt" class="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-full text-gray-700">What's the capital of France?</button>
+          <button data-llamabot="suggested-prompt" class="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-full text-gray-700">How do I stay productive?</button>
+          <button data-llamabot="suggested-prompt" class="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-full text-gray-700">Tell me a joke.</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="border-t border-gray-200 p-4 flex">
+      <input type="text" data-llamabot="message-input" class="flex-grow border rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Type your message...">
+      <button data-llamabot="send-button" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-r-lg" disabled>Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- Error Modal -->
+<div data-llamabot="error-modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden"></div>
+<div data-llamabot="error-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+  <div class="bg-white rounded-lg shadow-xl p-6 max-w-md mx-auto">
+    <h2 class="text-xl font-bold mb-4">Connection Error</h2>
+    <p class="mb-6">Lost connection to Leo. Is LlamaBot running? Refresh the page.</p>
+    <button data-llamabot="close-error-modal" class="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded">Close</button>
+  </div>
+</div>
+
+<!-- Load LlamaBot modular JavaScript -->
+<script type="module">
+  // Wait for ActionCable to be ready
+  function waitForCableConnection(callback) {
+    const interval = setInterval(() => {
+      if (window.LlamaBotRails && LlamaBotRails.cable) {
+        clearInterval(interval);
+        callback(LlamaBotRails.cable);
+      }
+    }, 50);
+  }
+
+  waitForCableConnection(async (consumer) => {
+    // Import LlamaBot modules from S3 CDN
+    const { default: LlamaBot } = await import('https://llamapress-cdn.s3.amazonaws.com/llamabot-chat-js-v0.2.19a/index.js');
+
+    const sessionId = crypto.randomUUID();
+
+    // Initialize LlamaBot with ActionCable configuration
+    console.log('🔧 Initializing LlamaBot with ActionCable consumer:', consumer);
+    const chat = LlamaBot.create('[data-llamabot="chat-container"]', {
+      actionCable: {
+        consumer: consumer,
+        channel: 'LlamaBotRails::ChatChannel',
+        session_id: sessionId
+      },
+      agent: {
+        name: 'rails_agent'
+      },
+      // Tailwind CSS classes for message styling
+      cssClasses: {
+        humanMessage: 'bg-indigo-100 text-indigo-900 p-3 rounded-lg mb-2 max-w-3xl',
+        aiMessage: 'bg-gray-100 text-gray-900 p-3 rounded-lg mb-2 max-w-4xl prose prose-sm',
+        errorMessage: 'bg-red-100 text-red-800 p-3 rounded-lg mb-2',
+        queuedMessage: 'bg-yellow-50 text-yellow-800 p-3 rounded-lg mb-2',
+        connectionStatusConnected: 'h-3 w-3 rounded-full bg-green-400 transition-colors',
+        connectionStatusDisconnected: 'h-3 w-3 rounded-full bg-red-400 transition-colors'
+      },
+      // Custom callbacks for Leonardo-specific behavior
+      onMessageReceived: (data) => {
+        console.log('Leonardo received message:', data);
+      },
+      onError: (error) => {
+        console.error('Leonardo chat error:', error);
+      }
+    });
+
+    console.log('Leonardo chat initialized with LlamaBot modules');
+  });
+</script>
+
+<!-- Inline styles for loading animation and menu drawer -->
+<style>
+  .loading-dots:after {
+    content: '.';
+    animation: dots 1.5s steps(5, end) infinite;
+  }
+
+  @keyframes dots {
+    0%, 20% { content: '.'; }
+    40% { content: '..'; }
+    60% { content: '...'; }
+    80%, 100% { content: ''; }
+  }
+
+  .menu-drawer {
+    position: fixed;
+    top: 0;
+    left: -300px;
+    width: 300px;
+    height: 100%;
+    background: white;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    transition: left 0.3s ease;
+    z-index: 1000;
+  }
+
+  .menu-drawer.open {
+    left: 0;
+  }
+
+  .drawer-content {
+    height: 100%;
+    overflow-y: auto;
+  }
+</style>

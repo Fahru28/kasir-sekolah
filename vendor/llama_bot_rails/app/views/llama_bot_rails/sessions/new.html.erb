@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html data-theme="light">
+<head>
+  <title>Sign in with your LlamaPress.ai account</title>
+  <%= render "llama_bot_rails/activity_events/head" %>
+</head>
+<body>
+  <div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-6">
+    <div class="max-w-md w-full">
+      <div class="bg-white rounded-lg shadow-lg p-8">
+        <div class="text-center mb-6">
+          <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i class="fas fa-user-lock text-2xl text-purple-600"></i>
+          </div>
+          <h1 class="text-2xl font-bold text-gray-800">Sign in with your LlamaPress.ai account</h1>
+          <p class="text-gray-600 mt-2 text-sm">
+            Sign in to see your messages, tickets and activity.
+          </p>
+        </div>
+
+        <% if @error.present? %>
+          <div class="alert alert-error mb-4 text-sm" role="alert">
+            <i class="fas fa-circle-exclamation"></i>
+            <span><%= @error %></span>
+          </div>
+        <% end %>
+
+        <%#
+          Fields are namespaced under the Devise scope (user[email], user[password])
+          because Warden hands the params straight to Devise's database
+          authenticatable strategy, which looks for them under that key.
+        %>
+        <%= form_with url: llama_bot_rails.sign_in_path, method: :post, local: true, class: "space-y-4" do |f| %>
+          <%= hidden_field_tag :return_to, @return_to %>
+
+          <div>
+            <label class="label" for="llama_bot_sign_in_email">
+              <span class="label-text font-medium">Email</span>
+            </label>
+            <input id="llama_bot_sign_in_email"
+                   type="email"
+                   name="<%= devise_scope %>[email]"
+                   autocomplete="username"
+                   autofocus
+                   required
+                   class="input input-bordered w-full">
+          </div>
+
+          <div>
+            <label class="label" for="llama_bot_sign_in_password">
+              <span class="label-text font-medium">Password</span>
+            </label>
+            <input id="llama_bot_sign_in_password"
+                   type="password"
+                   name="<%= devise_scope %>[password]"
+                   autocomplete="current-password"
+                   required
+                   class="input input-bordered w-full">
+          </div>
+
+          <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+            <input type="checkbox" name="<%= devise_scope %>[remember_me]" value="1" class="checkbox checkbox-sm">
+            Keep me signed in
+          </label>
+
+          <button type="submit" class="btn btn-primary btn-block">
+            <i class="fas fa-right-to-bracket mr-2"></i> Sign in
+          </button>
+        <% end %>
+
+        <%#
+          The host app owns password reset and registration, and may not mount
+          either one. Link out only to routes that actually exist, so this page
+          never renders a dead link.
+        %>
+        <div class="mt-6 pt-4 border-t border-gray-100 text-center text-sm text-gray-500 space-x-4">
+          <% if main_app.respond_to?(:new_user_password_path) %>
+            <%= link_to "Forgot your password?", main_app.new_user_password_path, class: "link link-hover" %>
+          <% end %>
+          <% if main_app.respond_to?(:new_user_registration_path) %>
+            <%= link_to "Create an account", main_app.new_user_registration_path, class: "link link-hover" %>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

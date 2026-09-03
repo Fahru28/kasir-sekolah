@@ -1,0 +1,128 @@
+<%= form_with model: feedback, url: feedback.persisted? ? user_feedback_path(feedback) : user_feedbacks_path, class: "space-y-6" do |f| %>
+  <% if feedback.errors.any? %>
+    <div class="alert alert-error">
+      <i class="fas fa-exclamation-circle"></i>
+      <div>
+        <h3 class="font-bold">Please fix the following errors:</h3>
+        <ul class="list-disc list-inside">
+          <% feedback.errors.full_messages.each do |message| %>
+            <li><%= message %></li>
+          <% end %>
+        </ul>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Title -->
+  <div class="form-control">
+    <%= f.label :title, class: "label" do %>
+      <span class="label-text font-semibold">Title</span>
+    <% end %>
+    <%= f.text_field :title, class: "input input-bordered w-full", placeholder: "Brief summary of your feedback (optional)" %>
+  </div>
+
+  <!-- Feedback Type -->
+  <div class="form-control">
+    <%= f.label :feedback_type, class: "label" do %>
+      <span class="label-text font-semibold">Type</span>
+    <% end %>
+    <%= f.select :feedback_type, LlamaBotRails::UserFeedback::FEEDBACK_TYPES.map { |t| [t.humanize, t] }, { include_blank: "Select type (optional)" }, class: "select select-bordered w-full" %>
+  </div>
+
+  <!-- Description -->
+  <div class="form-control">
+    <%= f.label :description, class: "label" do %>
+      <span class="label-text font-semibold">Description</span>
+    <% end %>
+    <%= f.text_area :description, class: "textarea textarea-bordered w-full h-32", placeholder: "Please provide details about your feedback (optional)..." %>
+  </div>
+
+  <!-- Status -->
+  <div class="form-control">
+    <%= f.label :status, class: "label" do %>
+      <span class="label-text font-semibold">Status</span>
+    <% end %>
+    <%= f.select :status, LlamaBotRails::UserFeedback::STATUSES.map { |s| [s.humanize, s] }, { include_blank: "Select status" }, class: "select select-bordered w-full" %>
+  </div>
+
+  <!-- Priority -->
+  <div class="form-control">
+    <%= f.label :priority, class: "label" do %>
+      <span class="label-text font-semibold">Priority</span>
+    <% end %>
+    <%= f.select :priority, [['Low', 0], ['Medium', 1], ['High', 2], ['Critical', 3]], { include_blank: "Select priority" }, class: "select select-bordered w-full" %>
+  </div>
+
+  <!-- Attachments -->
+  <div class="form-control">
+    <%= f.label :attachments, class: "label" do %>
+      <span class="label-text font-semibold">Attachments</span>
+    <% end %>
+
+    <% if feedback.persisted? && feedback.attachments.attached? %>
+      <div class="mb-4 space-y-2">
+        <p class="text-sm text-gray-600 font-medium">Current attachments:</p>
+        <% feedback.attachments.each do |attachment| %>
+          <div class="flex items-center gap-3 p-2 bg-gray-50 rounded" data-existing-attachment>
+            <!-- Hidden field to preserve this attachment. Dropping it (see
+                 removeExistingAttachment) is what removes the attachment on save. -->
+            <%= hidden_field_tag "user_feedback[attachments][]", attachment.signed_id, id: nil %>
+            <% if attachment.image? %>
+              <%= image_tag main_app.rails_blob_path(attachment, disposition: 'inline'),
+                            class: "w-12 h-12 object-cover rounded bg-white border border-gray-200",
+                            alt: attachment.filename.to_s, loading: "lazy" %>
+            <% else %>
+              <i class="fas fa-paperclip text-gray-400 w-12 text-center"></i>
+            <% end %>
+            <span class="text-sm flex-1 truncate" data-attachment-name><%= attachment.filename %></span>
+            <span class="text-xs text-gray-400"><%= number_to_human_size(attachment.byte_size) %></span>
+            <button type="button" class="btn btn-ghost btn-xs text-red-500" title="Remove"
+                    onclick="removeExistingAttachment(this)">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        <% end %>
+        <p class="text-xs text-gray-400">Removals take effect when you save.</p>
+      </div>
+    <% end %>
+
+    <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
+      <%# include_hidden pins the empty submission: without the blank entry, removing
+          EVERY attachment sends no attachments key at all and the update is a no-op.
+          Host apps below `load_defaults 7.0` don't get it by default, so ask explicitly. %>
+      <%= f.file_field :attachments, multiple: true, include_hidden: true, class: "file-input file-input-bordered w-full", accept: "*/*",
+                       data: { preview_target: "feedback-attachment-preview" }, onchange: "mergePickedAttachments(this)" %>
+      <p class="text-sm text-gray-500 mt-2">Upload images, videos, documents, or any other files</p>
+      <p class="text-xs text-gray-400 mt-1">Pick files one at a time — each one is added to the list. You can also paste an image from your clipboard.</p>
+      <div id="feedback-attachment-preview" class="mt-3 flex flex-wrap gap-2 justify-center"></div>
+    </div>
+  </div>
+
+  <% if can?(:moderate_feedback) %>
+    <div class="divider">Admin Options</div>
+
+    <!-- Admin Notes (Admin only) -->
+    <div class="form-control">
+      <%= f.label :admin_notes, class: "label" do %>
+        <span class="label-text font-semibold">Admin Notes</span>
+      <% end %>
+      <%= f.text_area :admin_notes, class: "textarea textarea-bordered w-full h-24", placeholder: "Internal notes (not visible to user)" %>
+    </div>
+
+    <!-- Resolution (Admin only) -->
+    <div class="form-control">
+      <%= f.label :resolution, class: "label" do %>
+        <span class="label-text font-semibold">Resolution</span>
+      <% end %>
+      <%= f.text_area :resolution, class: "textarea textarea-bordered w-full h-24", placeholder: "How this feedback was addressed" %>
+    </div>
+  <% end %>
+
+  <!-- Submit Button -->
+  <div class="flex justify-end gap-3 pt-4">
+    <%= link_to "Cancel", feedback.persisted? ? user_feedback_path(feedback) : user_feedbacks_path, class: "btn btn-ghost" %>
+    <%= f.submit feedback.persisted? ? "Update Feedback" : "Submit Feedback", class: "btn btn-primary" %>
+  </div>
+<% end %>
+
+<%= render 'attachment_staging_js' %>

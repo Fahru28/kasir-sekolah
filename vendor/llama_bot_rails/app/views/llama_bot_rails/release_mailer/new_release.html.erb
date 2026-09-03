@@ -1,0 +1,17 @@
+<h2>What's new in <%= @release.version %></h2>
+
+<% if @release.title.present? %>
+  <h3><%= @release.title %></h3>
+<% end %>
+
+<% if @release.released_at %>
+  <p style="color:#888;font-size:13px;"><%= @release.released_at.strftime("%B %-d, %Y") %></p>
+<% end %>
+
+<% if @release.notes.present? %>
+  <%= simple_format(@release.notes) %>
+<% end %>
+
+<% if @url %>
+  <p><a href="<%= @url %>">View the full release notes</a></p>
+<% end %>

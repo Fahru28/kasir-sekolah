@@ -1,0 +1,89 @@
+<% content_for :title, "Notifications - LlamaBotRails" %>
+
+  <div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+      <%# No page title, and no cross-links to Feedback/Messages: the Inbox tab
+          bar above both names this page and owns navigation between the Inbox
+          pages. Only the action that belongs to this page is left. %>
+      <div class="mb-4 flex items-center justify-between">
+        <p class="text-gray-600">Stay updated on your feedback and messages</p>
+        <%= button_to mark_read_notifications_path, method: :post, class: "btn btn-primary btn-sm" do %>
+          <i class="fas fa-check-double"></i> Mark All Read
+        <% end %>
+      </div>
+
+      <!-- Notifications List -->
+      <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        <% if @notifications.any? %>
+          <% @notifications.each do |notification| %>
+            <div class="px-6 py-4 border-b border-gray-100 hover:bg-gray-50 transition-colors <%= notification.read? ? '' : 'bg-blue-50' %>"
+                 data-notification-id="<%= notification.id %>">
+              <div class="flex items-start gap-4">
+                <!-- Icon -->
+                <div class="flex-shrink-0 mt-1">
+                  <% case notification.notification_type %>
+                  <% when 'new_message' %>
+                    <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                      <i class="fas fa-envelope text-purple-600"></i>
+                    </div>
+                  <% when 'feedback_comment' %>
+                    <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                      <i class="fas fa-comment text-green-600"></i>
+                    </div>
+                  <% when 'feedback_status_change' %>
+                    <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                      <i class="fas fa-sync text-blue-600"></i>
+                    </div>
+                  <% else %>
+                    <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                      <i class="fas fa-bell text-gray-600"></i>
+                    </div>
+                  <% end %>
+                </div>
+
+                <!-- Content -->
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm text-gray-800 <%= notification.read? ? '' : 'font-semibold' %>">
+                    <%= notification.message %>
+                  </p>
+                  <div class="flex items-center gap-3 mt-2">
+                    <span class="text-xs text-gray-400">
+                      <%= notification.created_at.strftime('%a, %b %d') %> at <%= notification.created_at.strftime('%I:%M %p') %>
+                    </span>
+                    <span class="badge badge-xs badge-ghost"><%= notification.notification_type.humanize %></span>
+                  </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex items-center gap-2">
+                  <% unless notification.read? %>
+                    <%= button_to read_notification_path(notification), method: :post, class: "btn btn-ghost btn-xs", title: "Mark as read" do %>
+                      <i class="fas fa-check"></i>
+                    <% end %>
+                  <% end %>
+
+                  <% if notification.metadata.present? %>
+                    <% if notification.metadata['conversation_id'] %>
+                      <%= link_to conversation_path(notification.metadata['conversation_id']), class: "btn btn-ghost btn-xs" do %>
+                        <i class="fas fa-arrow-right"></i>
+                      <% end %>
+                    <% elsif notification.metadata['feedback_id'] %>
+                      <%= link_to user_feedback_path(notification.metadata['feedback_id']), class: "btn btn-ghost btn-xs" do %>
+                        <i class="fas fa-arrow-right"></i>
+                      <% end %>
+                    <% end %>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+          <% end %>
+        <% else %>
+          <div class="p-12 text-center">
+            <i class="fas fa-bell-slash text-4xl text-gray-300 mb-4"></i>
+            <p class="text-gray-500">No notifications yet</p>
+            <p class="text-sm text-gray-400 mt-2">You'll be notified when someone messages you or comments on your feedback</p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>

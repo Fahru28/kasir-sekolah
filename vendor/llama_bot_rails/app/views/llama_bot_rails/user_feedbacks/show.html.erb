@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html data-theme="light">
+<head>
+  <title><%= @feedback.title %> - LlamaBotRails</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <%= csrf_meta_tags %>
+  <style>
+    /* Toast Notification Styles */
+    @keyframes toastSlideIn {
+      from { opacity: 0; transform: translateX(400px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes toastSlideOut {
+      from { opacity: 1; transform: translateX(0); }
+      to { opacity: 0; transform: translateX(400px); }
+    }
+    @keyframes progressShrink {
+      from { width: 100%; }
+      to { width: 0%; }
+    }
+    .toast {
+      animation: toastSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+      pointer-events: auto;
+    }
+    .toast.exiting {
+      animation: toastSlideOut 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+    .toast-progress {
+      animation: progressShrink linear;
+    }
+    .toast-success {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      box-shadow: 0 8px 32px rgba(16, 185, 129, 0.15);
+    }
+    .toast-error {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      box-shadow: 0 8px 32px rgba(239, 68, 68, 0.15);
+    }
+  </style>
+  <script>
+    // The selected-element preview is a fixed-height frame so a big selection can't
+    // push the rest of the page off screen; this gives you a taller look on demand.
+    function toggleSelectedElementPreview() {
+      const frame = document.getElementById('selected-element-preview');
+      const toggle = document.getElementById('selected-element-preview-toggle');
+      if (!frame) return;
+      const expanded = frame.classList.toggle('h-[36rem]');
+      frame.classList.toggle('h-64', !expanded);
+      if (toggle) toggle.textContent = expanded ? 'Collapse' : 'Expand';
+    }
+
+    function toggleReplyForm(commentId) {
+      const form = document.getElementById('reply-form-' + commentId);
+      if (form) {
+        form.classList.toggle('hidden');
+        if (!form.classList.contains('hidden')) {
+          form.querySelector('textarea').focus();
+        }
+      }
+    }
+
+    function openVideoModal(src, type) {
+      const modal = document.getElementById('video-modal');
+      const video = document.getElementById('modal-video');
+      const source = document.getElementById('modal-video-source');
+      source.src = src;
+      source.type = type;
+      video.load();
+      modal.showModal();
+    }
+
+    function openImageModal(src, filename) {
+      const modal = document.getElementById('image-modal');
+      const image = document.getElementById('modal-image');
+      const caption = document.getElementById('modal-image-caption');
+      const download = document.getElementById('modal-image-download');
+      image.src = src;
+      image.alt = filename || '';
+      caption.textContent = filename || '';
+      download.href = src;
+      modal.showModal();
+    }
+
+    function toggleEditForm(commentId) {
+      const form = document.getElementById('edit-form-' + commentId);
+      const body = document.getElementById('comment-body-' + commentId);
+      if (!form) return;
+      form.classList.toggle('hidden');
+      if (body) body.classList.toggle('hidden');
+      if (!form.classList.contains('hidden')) {
+        const textarea = form.querySelector('textarea');
+        if (textarea) {
+          textarea.focus();
+          // Put the cursor at the end so typing appends instead of overwriting.
+          textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+        }
+      }
+    }
+
+    function shareAttachment(attachmentId) {
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+      fetch(window.location.pathname + '/share_attachment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
+        body: JSON.stringify({ attachment_id: attachmentId })
+      })
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('share-url').value = data.url;
+        document.getElementById('share-modal').showModal();
+      })
+      .catch(err => {
+        console.error('Failed to create share link:', err);
+        alert('Failed to create share link');
+      });
+    }
+
+    function copyShareUrl() {
+      const input = document.getElementById('share-url');
+      input.select();
+      input.setSelectionRange(0, 99999);
+      document.execCommand('copy');
+
+      const btn = document.getElementById('copy-share-btn');
+      const originalHtml = btn.innerHTML;
+      btn.innerHTML = '<i class="fas fa-check"></i>';
+      btn.classList.add('btn-success');
+      btn.classList.remove('btn-primary');
+      setTimeout(() => {
+        btn.innerHTML = originalHtml;
+        btn.classList.remove('btn-success');
+        btn.classList.add('btn-primary');
+      }, 2000);
+    }
+  </script>
+  <%= render 'attachment_staging_js' %>
+</head>
+<body>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="fixed top-6 right-6 z-50 pointer-events-none"></div>
+
+  <% can_edit = can?(:moderate_feedback) || @feedback.user_id == current_llama_user&.id %>
+
+  <!-- Status Selector Dropdown -->
+    <div id="feedback-status-selector" class="feedback-dropdown fixed hidden z-[9999] bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[180px] max-h-[300px] overflow-y-auto">
+      <div class="px-3 py-2 text-xs font-semibold text-gray-500 border-b">Select Status</div>
+      <% LlamaBotRails::UserFeedback::STATUSES.each do |status| %>
+        <button
+          type="button"
+          class="dropdown-option w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
+          data-value="<%= status %>"
+          onclick="handleStatusSelect('<%= status %>', '<%= status.humanize %>')"
+        >
+          <i class="fas <%= feedback_status_icon(status) %> text-xs w-4"></i>
+          <span class="badge badge-xs <%= feedback_status_badge_class(status) %>"><%= status.humanize %></span>
+        </button>
+      <% end %>
+    </div>
+
+    <!-- Type Selector Dropdown -->
+    <div id="feedback-type-selector" class="feedback-dropdown fixed hidden z-[9999] bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[180px] max-h-[300px] overflow-y-auto">
+      <div class="px-3 py-2 text-xs font-semibold text-gray-500 border-b">Select Type</div>
+      <% LlamaBotRails::UserFeedback::FEEDBACK_TYPES.each do |type| %>
+        <button
+          type="button"
+          class="dropdown-option w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
+          data-value="<%= type %>"
+          onclick="handleTypeSelect('<%= type %>', '<%= type.humanize %>')"
+        >
+          <i class="fas <%= feedback_type_icon(type) %> text-xs w-4"></i>
+          <span class="badge badge-xs <%= feedback_type_badge_class(type) %>"><%= type.humanize %></span>
+        </button>
+      <% end %>
+    </div>
+
+    <!-- Priority Selector Dropdown -->
+    <div id="feedback-priority-selector" class="feedback-dropdown fixed hidden z-[9999] bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[160px]">
+      <div class="px-3 py-2 text-xs font-semibold text-gray-500 border-b">Select Priority</div>
+      <% [0, 1, 2, 3].each do |priority| %>
+        <button
+          type="button"
+          class="dropdown-option w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
+          data-value="<%= priority %>"
+          onclick="handlePrioritySelect(<%= priority %>, '<%= priority_label(priority) %>')"
+        >
+          <span class="badge badge-xs <%= priority_badge_class(priority) %>"><%= priority_label(priority) %></span>
+        </button>
+      <% end %>
+    </div>
+
+    <!-- User Selector Dropdown -->
+    <div id="feedback-user-selector" class="feedback-dropdown fixed hidden z-[9999] bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[220px] max-h-[300px] overflow-y-auto">
+      <div class="px-3 py-2 text-xs font-semibold text-gray-500 border-b">Assign to User</div>
+      <% @submitters.each do |user_id, user_email| %>
+        <%
+          user = LlamaBotRails.user_resolver&.call(user_id)
+          display_email = user&.email || user_email || "User ##{user_id}"
+        %>
+        <button
+          type="button"
+          class="dropdown-option w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
+          data-value="<%= user_id %>"
+          onclick="handleUserSelect(<%= user_id %>, '<%= j(display_email) %>')"
+        >
+          <div class="w-6 h-6 rounded-full bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+            <%= display_email[0].upcase %>
+          </div>
+          <span class="truncate"><%= display_email %></span>
+        </button>
+      <% end %>
+    </div>
+
+  <div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+      <!-- Back Link -->
+      <div class="mb-6">
+        <%# Falls back to an anchored link (#feedback-<id>) so the index can scroll to
+            and flash this card when history.back() isn't available. %>
+        <%= link_to user_feedbacks_path(anchor: "feedback-#{@feedback.id}"),
+                    class: "btn btn-ghost btn-sm",
+                    onclick: "return backToFeedbackIndex(event);" do %>
+          <i class="fas fa-arrow-left"></i> Back to Feedback
+        <% end %>
+      </div>
+
+      <script>
+        // If we arrived here from the feedback index, go back through history so the
+        // browser restores the exact scroll position (and any expanded groups).
+        // Otherwise let the anchored link through.
+        function backToFeedbackIndex(event) {
+          const indexPath = '<%= j user_feedbacks_path %>';
+          let cameFromIndex = false;
+
+          if (document.referrer) {
+            try {
+              const ref = new URL(document.referrer, window.location.origin);
+              cameFromIndex = ref.origin === window.location.origin && ref.pathname === indexPath;
+            } catch (e) {
+              cameFromIndex = false;
+            }
+          }
+
+          if (cameFromIndex && window.history.length > 1) {
+            event.preventDefault();
+            window.history.back();
+            return false;
+          }
+
+          return true;
+        }
+      </script>
+
+      <!-- Main Card -->
+      <div class="bg-white rounded-lg shadow-sm p-8">
+        <!-- Header -->
+        <div class="flex items-start justify-between mb-6">
+          <div>
+            <div class="flex items-center gap-3 mb-3">
+              <%# Type Badge %>
+              <button
+                type="button"
+                class="badge feedback-badge-clickable cursor-pointer hover:opacity-80 transition-opacity <%= feedback_type_badge_class(@feedback.feedback_type) %>"
+                data-feedback-badge="<%= @feedback.id %>-feedback_type"
+                onclick="openFeedbackDropdown(event, <%= @feedback.id %>, 'type', '<%= @feedback.feedback_type %>')"
+              >
+                <i class="fas <%= feedback_type_icon(@feedback.feedback_type) %> mr-1"></i>
+                <span class="badge-text"><%= @feedback.feedback_type.humanize %></span>
+              </button>
+
+              <%# Status Badge %>
+              <button
+                type="button"
+                class="badge feedback-badge-clickable cursor-pointer hover:opacity-80 transition-opacity <%= feedback_status_badge_class(@feedback.status) %>"
+                data-feedback-badge="<%= @feedback.id %>-status"
+                onclick="openFeedbackDropdown(event, <%= @feedback.id %>, 'status', '<%= @feedback.status %>')"
+              >
+                <i class="fas <%= feedback_status_icon(@feedback.status) %> mr-1"></i>
+                <span class="badge-text"><%= @feedback.status.humanize %></span>
+              </button>
+
+              <%# Priority Badge %>
+              <button
+                type="button"
+                class="badge feedback-badge-clickable cursor-pointer hover:opacity-80 transition-opacity <%= priority_badge_class(@feedback.priority) %>"
+                data-feedback-badge="<%= @feedback.id %>-priority"
+                onclick="openFeedbackDropdown(event, <%= @feedback.id %>, 'priority', '<%= @feedback.priority %>')"
+              >
+                <span class="badge-text"><%= priority_label(@feedback.priority) %> Priority</span>
+              </button>
+            </div>
+            <h1 class="text-2xl font-bold text-gray-800"><%= @feedback.title %></h1>
+          </div>
+
+          <div class="flex gap-2">
+            <% if can?(:moderate_feedback) || @feedback.user_id == current_llama_user&.id %>
+              <%= link_to edit_user_feedback_path(@feedback), class: "btn btn-outline btn-sm" do %>
+                <i class="fas fa-edit"></i> Edit
+              <% end %>
+            <% end %>
+            <% if can?(:moderate_feedback) || @feedback.user_id == current_llama_user&.id %>
+              <%= button_to user_feedback_path(@feedback), method: :delete, data: { turbo_confirm: "Are you sure you want to delete this feedback?" }, class: "btn btn-error btn-sm" do %>
+                <i class="fas fa-trash"></i> Delete
+              <% end %>
+            <% end %>
+          </div>
+        </div>
+
+        <!-- Meta Info -->
+        <div class="flex flex-wrap items-center gap-4 text-sm text-gray-500 mb-6 pb-6 border-b">
+          <button
+            type="button"
+            class="feedback-badge-clickable cursor-pointer hover:text-gray-700 transition-colors flex items-center gap-1"
+            data-feedback-badge="<%= @feedback.id %>-user_id"
+            onclick="openFeedbackDropdown(event, <%= @feedback.id %>, 'user', '<%= @feedback.user_id %>')"
+          >
+            <i class="fas fa-user mr-1"></i>
+            <span class="badge-text"><%= @feedback.display_author %></span>
+            <i class="fas fa-chevron-down text-xs ml-1 opacity-50"></i>
+          </button>
+          <span><i class="fas fa-calendar mr-1"></i> <%= @feedback.created_at.strftime('%a, %B %d, %Y at %I:%M %p') %></span>
+          <% if @feedback.resolved_at %>
+            <span><i class="fas fa-check mr-1"></i> Resolved <%= time_ago_in_words(@feedback.resolved_at) %> ago</span>
+          <% end %>
+        </div>
+
+        <!-- Description -->
+        <div class="mb-6">
+          <h3 class="text-lg font-semibold text-gray-700 mb-3">Description</h3>
+          <div class="prose prose-sm max-w-none text-gray-600 whitespace-pre-wrap"><%= @feedback.description %></div>
+        </div>
+
+        <!-- Where this came from: the page, and the element the reporter pointed at -->
+        <% page_path = feedback_page_path(@feedback) %>
+        <% if page_path.present? || @feedback.selected_element_selector.present? || @feedback.selected_element_html.present? %>
+          <div class="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
+            <h3 class="text-lg font-semibold text-green-800 mb-2">
+              <i class="fas fa-crosshairs mr-2"></i>Where this came from
+            </h3>
+            <% if page_path.present? %>
+              <%# A labelled button, not a bare URL behind a chain icon — QA couldn't tell
+                  the old link was a link. When an element was picked the link carries its
+                  selector, and feedback_element_highlight.js rings it on arrival. %>
+              <div class="flex flex-wrap items-center gap-3 mb-3">
+                <%= link_to page_path, class: "btn btn-sm btn-success text-white no-underline", target: "_blank", rel: "noopener" do %>
+                  <i class="fas fa-external-link-alt mr-2"></i>
+                  <%= @feedback.selected_element_selector.present? ? "Open page & highlight element" : "Open the page" %>
+                <% end %>
+                <code class="text-xs text-green-800 bg-white border border-green-200 rounded px-1.5 py-0.5 break-all"><%= @feedback.selected_element_url %></code>
+              </div>
+            <% end %>
+            <% if @feedback.selected_element_selector.present? || @feedback.selected_element_html.present? %>
+              <p class="text-sm text-green-700 mb-2">
+                <span class="font-medium">Element:</span>
+                <% if (label = selected_element_label(@feedback)).present? %>
+                  <span class="font-mono"><%= label %></span>
+                <% end %>
+                <% if @feedback.selected_element_selector.present? %>
+                  <code class="bg-white border border-green-200 rounded px-1.5 py-0.5 break-all"><%= @feedback.selected_element_selector %></code>
+                <% end %>
+              </p>
+            <% end %>
+            <% if @feedback.selected_element_html.present? %>
+              <div class="mt-3">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-sm font-medium text-green-800"><i class="fas fa-eye mr-1"></i>Preview</span>
+                  <% unless selected_element_preview_too_large?(@feedback.selected_element_html) %>
+                    <button type="button"
+                            id="selected-element-preview-toggle"
+                            onclick="toggleSelectedElementPreview()"
+                            class="text-xs text-green-800 underline cursor-pointer">Expand</button>
+                  <% end %>
+                </div>
+                <% if selected_element_preview_too_large?(@feedback.selected_element_html) %>
+                  <p class="text-sm text-green-700 bg-white border border-green-200 rounded p-3">
+                    This selection is too large to preview
+                    (<%= number_to_human_size(@feedback.selected_element_html.bytesize) %>) — the HTML is below.
+                  </p>
+                <% else %>
+                  <%# Sandboxed WITHOUT allow-same-origin: the captured markup renders but runs
+                      in an opaque origin, so it can't reach this page. See FeedbackHelper. %>
+                  <iframe id="selected-element-preview"
+                          class="w-full h-64 bg-white border border-green-200 rounded"
+                          sandbox="allow-scripts"
+                          referrerpolicy="no-referrer"
+                          title="Rendered preview of the selected element"
+                          srcdoc="<%= selected_element_preview_document(@feedback.selected_element_html) %>"></iframe>
+                <% end %>
+              </div>
+              <details class="mt-3">
+                <summary class="text-sm text-green-800 cursor-pointer">View HTML</summary>
+                <pre class="mt-2 p-3 bg-white border border-green-200 rounded text-xs text-gray-700 overflow-x-auto whitespace-pre-wrap"><%= @feedback.selected_element_html %></pre>
+              </details>
+            <% end %>
+          </div>
+        <% end %>
+
+        <!-- Resolution (if resolved) -->
+        <% if @feedback.resolution.present? %>
+          <div class="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
+            <h3 class="text-lg font-semibold text-green-800 mb-2">
+              <i class="fas fa-check-circle mr-2"></i>Resolution
+            </h3>
+            <p class="text-green-700 whitespace-pre-wrap"><%= @feedback.resolution %></p>
+          </div>
+        <% end %>
+
+        <!-- Admin Notes (if present and user is admin) -->
+        <% if @feedback.admin_notes.present? && can?(:moderate_feedback) %>
+          <div class="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <h3 class="text-lg font-semibold text-yellow-800 mb-2">
+              <i class="fas fa-sticky-note mr-2"></i>Admin Notes
+            </h3>
+            <p class="text-yellow-700 whitespace-pre-wrap"><%= @feedback.admin_notes %></p>
+          </div>
+        <% end %>
+
+        <!-- Tags -->
+        <div class="mb-6">
+          <h3 class="text-lg font-semibold text-gray-700 mb-3">Tags</h3>
+          <div class="flex flex-wrap gap-2">
+            <% @feedback.tags.each do |tag| %>
+              <span class="badge" style="<%= tag_style(tag) %>">
+                <%= tag.name %>
+                <% if can?(:manage_tags) %>
+                  <%= button_to remove_tag_user_feedback_path(@feedback, tag_id: tag.id), method: :delete, class: "ml-1 hover:opacity-75" do %>
+                    <i class="fas fa-times text-xs"></i>
+                  <% end %>
+                <% end %>
+              </span>
+            <% end %>
+            <% if @feedback.tags.empty? %>
+              <span class="text-gray-400 text-sm">No tags</span>
+            <% end %>
+          </div>
+
+          <% if can?(:manage_tags) %>
+            <div class="mt-3">
+              <%= form_with url: add_tag_user_feedback_path(@feedback), method: :post, class: "flex items-center gap-2" do |f| %>
+                <select name="tag_id" class="select select-bordered select-sm">
+                  <option value="">Add a tag...</option>
+                  <% LlamaBotRails::Tag.ordered.each do |tag| %>
+                    <% unless @feedback.tags.include?(tag) %>
+                      <option value="<%= tag.id %>"><%= tag.name %></option>
+                    <% end %>
+                  <% end %>
+                </select>
+                <button type="submit" class="btn btn-primary btn-sm">
+                  <i class="fas fa-plus"></i> Add
+                </button>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+
+        <!-- Attachments -->
+        <% if @feedback.attachments.any? %>
+          <div class="mb-6">
+            <h3 class="text-lg font-semibold text-gray-700 mb-3">Attachments</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <% @feedback.attachments.each do |attachment| %>
+                <div class="bg-gray-100 rounded-lg p-3 text-center relative group">
+                  <% if attachment.image? %>
+                    <div class="cursor-zoom-in" onclick="openImageModal('<%= main_app.rails_blob_path(attachment, disposition: 'inline') %>', '<%= j attachment.filename.to_s %>')" title="Click to enlarge">
+                      <%= image_tag main_app.rails_blob_path(attachment, disposition: 'inline'), class: "w-full h-32 object-contain rounded mb-2 bg-white hover:opacity-90 transition-opacity", alt: attachment.filename.to_s, loading: "lazy" %>
+                    </div>
+                  <% elsif attachment.video? %>
+                    <div class="relative cursor-pointer" onclick="openVideoModal('<%= main_app.rails_blob_path(attachment, disposition: 'inline') %>', '<%= attachment.content_type %>')">
+                      <video class="w-full h-24 rounded mb-2 object-cover" preload="metadata" muted>
+                        <source src="<%= main_app.rails_blob_path(attachment, disposition: 'inline') %>" type="<%= attachment.content_type %>">
+                      </video>
+                      <div class="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors rounded">
+                        <i class="fas fa-play-circle text-white text-3xl"></i>
+                      </div>
+                    </div>
+                  <% else %>
+                    <div class="w-full h-24 flex items-center justify-center mb-2">
+                      <i class="fas <%= attachment_icon(attachment.content_type) %> text-4xl text-gray-400"></i>
+                    </div>
+                  <% end %>
+
+                  <!-- Share Button -->
+                  <button
+                    class="absolute top-1 right-1 btn btn-xs btn-circle btn-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                    onclick="event.stopPropagation(); shareAttachment(<%= attachment.id %>)"
+                    title="Get shareable link"
+                  >
+                    <i class="fas fa-share-alt text-xs"></i>
+                  </button>
+
+                  <p class="text-xs text-gray-600 truncate"><%= attachment.filename %></p>
+                  <div class="flex justify-center gap-2 mt-2">
+                    <%= link_to main_app.rails_blob_path(attachment, disposition: 'attachment'), class: "btn btn-ghost btn-xs" do %>
+                      <i class="fas fa-download"></i>
+                    <% end %>
+                    <%= button_to remove_attachment_user_feedback_path(@feedback, attachment_id: attachment.id), method: :delete, class: "btn btn-ghost btn-xs text-red-500", data: { turbo_confirm: "Remove this attachment?" } do %>
+                      <i class="fas fa-trash"></i>
+                    <% end %>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+
+        <!-- Video Modal -->
+        <dialog id="video-modal" class="modal">
+          <div class="modal-box max-w-4xl p-0 bg-black">
+            <video id="modal-video" controls autoplay class="w-full">
+              <source id="modal-video-source" src="" type="">
+            </video>
+            <form method="dialog" class="absolute top-2 right-2">
+              <button class="btn btn-sm btn-circle btn-ghost text-white hover:bg-white/20">
+                <i class="fas fa-times"></i>
+              </button>
+            </form>
+          </div>
+          <form method="dialog" class="modal-backdrop">
+            <button>close</button>
+          </form>
+        </dialog>
+
+        <!-- Image Lightbox -->
+        <dialog id="image-modal" class="modal">
+          <div class="modal-box max-w-5xl p-0 bg-white">
+            <img id="modal-image" src="" alt="" class="w-full max-h-[75vh] object-contain bg-gray-100" />
+            <div class="flex items-center justify-between gap-3 p-3">
+              <span id="modal-image-caption" class="text-sm text-gray-600 truncate"></span>
+              <a id="modal-image-download" href="#" download class="btn btn-sm btn-ghost">
+                <i class="fas fa-download"></i> Download
+              </a>
+            </div>
+            <form method="dialog" class="absolute top-2 right-2">
+              <button class="btn btn-sm btn-circle btn-ghost bg-white/80">
+                <i class="fas fa-times"></i>
+              </button>
+            </form>
+          </div>
+          <form method="dialog" class="modal-backdrop">
+            <button>close</button>
+          </form>
+        </dialog>
+
+        <!-- Share Modal -->
+        <dialog id="share-modal" class="modal">
+          <div class="modal-box">
+            <h3 class="font-bold text-lg mb-4"><i class="fas fa-share-alt text-primary mr-2"></i>Share Link</h3>
+            <p class="text-sm text-gray-500 mb-3">Anyone with this link can view the file:</p>
+            <div class="flex gap-2">
+              <input type="text" id="share-url" class="input input-bordered flex-1" readonly />
+              <button onclick="copyShareUrl()" class="btn btn-primary" id="copy-share-btn">
+                <i class="fas fa-copy"></i>
+              </button>
+            </div>
+            <div class="modal-action">
+              <form method="dialog">
+                <button class="btn">Close</button>
+              </form>
+            </div>
+          </div>
+          <form method="dialog" class="modal-backdrop">
+            <button>close</button>
+          </form>
+        </dialog>
+
+        <!-- Comments Section -->
+        <div class="mt-8 pt-6 border-t">
+          <h3 class="text-lg font-semibold text-gray-700 mb-4">
+            <i class="fas fa-comments mr-2"></i>Comments (<%= @comments.count %>)
+          </h3>
+
+          <!-- Comment Form -->
+          <% if current_llama_user %>
+            <%= form_with model: LlamaBotRails::FeedbackComment.new, url: user_feedback_comments_path(@feedback), class: "mb-6", id: "main-comment-form", multipart: true do |f| %>
+              <div class="flex gap-3">
+                <div class="flex-1 relative">
+                  <%= f.text_area :body, placeholder: "Add a comment... (use @ to mention users)", class: "textarea textarea-bordered w-full mention-textarea", rows: 2, id: "main-comment-body", data: { mention_target: "textarea" } %>
+                  <div id="main-mention-dropdown" class="mention-dropdown hidden absolute z-50 bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[220px] max-h-[200px] overflow-y-auto"></div>
+                  <div id="main-mentioned-ids-container"></div>
+
+                  <!-- File Attachment Input -->
+                  <div class="mt-2">
+                    <label class="flex items-center gap-2 cursor-pointer text-sm text-gray-600 hover:text-gray-800">
+                      <i class="fas fa-paperclip"></i>
+                      <span>Attach files</span>
+                      <%= f.file_field :attachments, multiple: true, class: "hidden", id: "main-comment-attachments", data: { preview_target: "main-attachment-preview" }, onchange: "mergePickedAttachments(this)" %>
+                    </label>
+                    <div id="main-attachment-preview" class="mt-2 flex flex-wrap gap-2"></div>
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-primary self-start">
+                  <i class="fas fa-paper-plane"></i>
+                </button>
+              </div>
+            <% end %>
+          <% end %>
+
+          <!-- Comments List -->
+          <div class="space-y-4">
+            <% @comments.each do |comment| %>
+              <%= render partial: 'llama_bot_rails/user_feedbacks/comment', locals: { comment: comment, feedback: @feedback, depth: 0 } %>
+            <% end %>
+
+            <% if @comments.empty? %>
+              <p class="text-gray-400 text-center py-4">No comments yet</p>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Toast Manager
+    class ToastManager {
+      constructor() {
+        this.container = document.getElementById('toast-container');
+        this.toasts = new Map();
+      }
+
+      show(message, type = 'success', duration = 3000) {
+        const toastId = `toast-${Date.now()}-${Math.random()}`;
+        const iconMap = {
+          success: '<i class="fas fa-check-circle"></i>',
+          error: '<i class="fas fa-exclamation-circle"></i>'
+        };
+        const icon = iconMap[type] || iconMap.success;
+        const existingToasts = this.container.children.length;
+        const offset = existingToasts * 8;
+
+        const toastEl = document.createElement('div');
+        toastEl.id = toastId;
+        toastEl.className = `toast toast-${type} rounded-lg px-5 py-4 text-white flex items-start gap-4 relative overflow-hidden`;
+        toastEl.style.cssText = `position: absolute; top: ${offset}px; right: 0; min-width: 280px; z-index: ${1000 + existingToasts};`;
+        toastEl.innerHTML = `
+          <div class="toast-icon text-lg mt-0.5">${icon}</div>
+          <div class="flex-1 text-sm font-medium leading-relaxed">${message}</div>
+          <button onclick="toastManager.dismiss('${toastId}')" class="flex-shrink-0 ml-2 hover:opacity-75 transition-opacity p-1 -mr-2">
+            <i class="fas fa-times text-lg"></i>
+          </button>
+          <div class="toast-progress absolute bottom-0 left-0 h-1 bg-white/30" style="animation-duration: ${duration}ms;"></div>
+        `;
+
+        this.container.appendChild(toastEl);
+        this.toasts.set(toastId, { element: toastEl, timeout: null });
+        const timeout = setTimeout(() => this.dismiss(toastId), duration);
+        this.toasts.get(toastId).timeout = timeout;
+        return toastId;
+      }
+
+      dismiss(toastId) {
+        const toast = this.toasts.get(toastId);
+        if (!toast) return;
+        if (toast.timeout) clearTimeout(toast.timeout);
+        toast.element.classList.add('exiting');
+        setTimeout(() => {
+          toast.element.remove();
+          this.toasts.delete(toastId);
+          this.repositionToasts();
+        }, 300);
+      }
+
+      repositionToasts() {
+        let index = 0;
+        this.container.querySelectorAll('.toast:not(.exiting)').forEach(el => {
+          el.style.top = `${index * 8}px`;
+          el.style.zIndex = 1000 + index;
+          index++;
+        });
+      }
+    }
+
+    let toastManager = new ToastManager();
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+
+    // Dropdown state
+    let activeFeedbackId = null;
+    let activeDropdownType = null;
+
+    // Badge class mappings (mirrors Ruby helpers)
+    const badgeClassMaps = {
+      status: {
+        'open': 'badge-warning',
+        'under_review': 'badge-info',
+        'acknowledged': 'badge-primary',
+        'in_progress': 'badge-accent',
+        'resolved': 'badge-success',
+        'closed': 'badge-neutral'
+      },
+      feedback_type: {
+        'bug': 'badge-error',
+        'suggestion': 'badge-info',
+        'question': 'badge-warning',
+        'complaint': 'badge-error',
+        'praise': 'badge-success',
+        'general': 'badge-ghost'
+      },
+      priority: {
+        '0': 'badge-ghost',
+        '1': 'badge-info',
+        '2': 'badge-warning',
+        '3': 'badge-error'
+      }
+    };
+
+    const iconMaps = {
+      status: {
+        'open': 'fa-circle-exclamation',
+        'under_review': 'fa-magnifying-glass',
+        'acknowledged': 'fa-check',
+        'in_progress': 'fa-spinner',
+        'resolved': 'fa-circle-check',
+        'closed': 'fa-lock'
+      },
+      feedback_type: {
+        'bug': 'fa-bug',
+        'suggestion': 'fa-lightbulb',
+        'question': 'fa-circle-question',
+        'complaint': 'fa-triangle-exclamation',
+        'praise': 'fa-star',
+        'general': 'fa-comment'
+      }
+    };
+
+    function openFeedbackDropdown(event, feedbackId, dropdownType, currentValue) {
+      event.stopPropagation();
+      activeFeedbackId = feedbackId;
+      activeDropdownType = dropdownType;
+
+      // Close any open dropdowns first
+      closeFeedbackDropdowns();
+
+      const selector = document.getElementById(`feedback-${dropdownType}-selector`);
+      const rect = event.target.getBoundingClientRect();
+
+      // Position near clicked badge
+      selector.style.top = `${rect.bottom + 4}px`;
+      selector.style.left = `${rect.left}px`;
+
+      // Highlight current selection
+      selector.querySelectorAll('.dropdown-option').forEach(opt => {
+        const isSelected = String(opt.dataset.value) === String(currentValue);
+        opt.classList.toggle('bg-blue-50', isSelected);
+        opt.classList.toggle('text-blue-700', isSelected);
+      });
+
+      selector.classList.remove('hidden');
+
+      // Adjust if it goes off-screen
+      const selectorRect = selector.getBoundingClientRect();
+      if (selectorRect.right > window.innerWidth) {
+        selector.style.left = `${window.innerWidth - selectorRect.width - 10}px`;
+      }
+      if (selectorRect.bottom > window.innerHeight) {
+        selector.style.top = `${rect.top - selectorRect.height - 4}px`;
+      }
+    }
+
+    function closeFeedbackDropdowns() {
+      ['status', 'type', 'priority', 'user'].forEach(type => {
+        const selector = document.getElementById(`feedback-${type}-selector`);
+        if (selector) selector.classList.add('hidden');
+      });
+    }
+
+    // Close when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.feedback-dropdown') && !e.target.closest('.feedback-badge-clickable')) {
+        closeFeedbackDropdowns();
+      }
+    });
+
+    function handleStatusSelect(value, displayValue) {
+      if (activeFeedbackId) {
+        updateFeedbackField(activeFeedbackId, 'status', value, displayValue);
+        closeFeedbackDropdowns();
+      }
+    }
+
+    function handleTypeSelect(value, displayValue) {
+      if (activeFeedbackId) {
+        updateFeedbackField(activeFeedbackId, 'feedback_type', value, displayValue);
+        closeFeedbackDropdowns();
+      }
+    }
+
+    function handlePrioritySelect(value, displayValue) {
+      if (activeFeedbackId) {
+        updateFeedbackField(activeFeedbackId, 'priority', value, `${displayValue} Priority`);
+        closeFeedbackDropdowns();
+      }
+    }
+
+    function handleUserSelect(value, displayValue) {
+      if (activeFeedbackId) {
+        updateFeedbackField(activeFeedbackId, 'user_id', value, displayValue);
+        closeFeedbackDropdowns();
+      }
+    }
+
+    function updateFeedbackField(feedbackId, field, value, displayValue) {
+      fetch(`<%= user_feedback_path(@feedback) %>.json`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
+        body: JSON.stringify({
+          user_feedback: { [field]: value }
+        })
+      })
+      .then(response => {
+        if (!response.ok) throw new Error(`Server returned ${response.status}`);
+        return response.json();
+      })
+      .then(data => {
+        updateBadgeDisplay(feedbackId, field, value, displayValue);
+        const fieldLabel = field.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
+        toastManager.show(`${fieldLabel} updated to <strong>${displayValue}</strong>`, 'success', 2000);
+      })
+      .catch(error => {
+        console.error('Error updating feedback:', error);
+        toastManager.show('Failed to update: ' + error.message, 'error', 3000);
+      });
+    }
+
+    function updateBadgeDisplay(feedbackId, field, value, displayValue) {
+      const badgeField = field === 'feedback_type' ? 'feedback_type' : field;
+      const badge = document.querySelector(`[data-feedback-badge="${feedbackId}-${badgeField}"]`);
+      if (!badge) return;
+
+      // Update text
+      const textSpan = badge.querySelector('.badge-text');
+      if (textSpan) textSpan.textContent = displayValue;
+
+      // For user_id, we just update the text, no badge classes
+      if (field === 'user_id') return;
+
+      // Update badge class
+      const mapKey = field === 'feedback_type' ? 'feedback_type' : field;
+      const badgeClassMap = badgeClassMaps[mapKey] || {};
+      Object.values(badgeClassMaps).forEach(map => {
+        Object.values(map).forEach(cls => badge.classList.remove(cls));
+      });
+      badge.classList.add(badgeClassMap[String(value)] || 'badge-ghost');
+
+      // Update icon (if applicable)
+      const iconMap = iconMaps[mapKey];
+      if (iconMap) {
+        const icon = badge.querySelector('i');
+        if (icon && iconMap[String(value)]) {
+          icon.className = `fas ${iconMap[String(value)]} mr-1`;
+        }
+      }
+    }
+
+    // ========================================
+    // @Mention Autocomplete System
+    // ========================================
+    class MentionAutocomplete {
+      constructor(textareaId, dropdownId, hiddenContainerId) {
+        this.textarea = document.getElementById(textareaId);
+        this.dropdown = document.getElementById(dropdownId);
+        this.hiddenContainer = document.getElementById(hiddenContainerId);
+        this.mentionedUsers = new Map(); // id -> email
+        this.isOpen = false;
+        this.selectedIndex = 0;
+        this.users = [];
+        this.mentionStart = -1;
+        this.searchQuery = '';
+
+        if (this.textarea) {
+          this.init();
+        }
+      }
+
+      init() {
+        this.textarea.addEventListener('input', (e) => this.handleInput(e));
+        this.textarea.addEventListener('keydown', (e) => this.handleKeydown(e));
+        document.addEventListener('click', (e) => this.handleClickOutside(e));
+      }
+
+      handleInput(e) {
+        const text = this.textarea.value;
+        const cursorPos = this.textarea.selectionStart;
+
+        // Find if we're in a mention context (after @ but before space)
+        const textBeforeCursor = text.substring(0, cursorPos);
+        const mentionMatch = textBeforeCursor.match(/@(\S*)$/);
+
+        if (mentionMatch) {
+          this.mentionStart = cursorPos - mentionMatch[0].length;
+          this.searchQuery = mentionMatch[1];
+          this.searchUsers(this.searchQuery);
+        } else {
+          this.closeDropdown();
+        }
+      }
+
+      handleKeydown(e) {
+        if (!this.isOpen) return;
+
+        switch (e.key) {
+          case 'ArrowDown':
+            e.preventDefault();
+            this.selectedIndex = Math.min(this.selectedIndex + 1, this.users.length - 1);
+            this.renderDropdown();
+            break;
+          case 'ArrowUp':
+            e.preventDefault();
+            this.selectedIndex = Math.max(this.selectedIndex - 1, 0);
+            this.renderDropdown();
+            break;
+          case 'Enter':
+          case 'Tab':
+            if (this.users.length > 0) {
+              e.preventDefault();
+              this.selectUser(this.users[this.selectedIndex]);
+            }
+            break;
+          case 'Escape':
+            e.preventDefault();
+            this.closeDropdown();
+            break;
+        }
+      }
+
+      handleClickOutside(e) {
+        if (!this.dropdown.contains(e.target) && e.target !== this.textarea) {
+          this.closeDropdown();
+        }
+      }
+
+      async searchUsers(query) {
+        try {
+          const response = await fetch(`<%= users_search_path %>?q=${encodeURIComponent(query)}`, {
+            headers: {
+              'Accept': 'application/json',
+              'X-CSRF-Token': csrfToken
+            }
+          });
+          this.users = await response.json();
+          this.selectedIndex = 0;
+          if (this.users.length > 0) {
+            this.openDropdown();
+            this.renderDropdown();
+          } else {
+            this.closeDropdown();
+          }
+        } catch (error) {
+          console.error('Error searching users:', error);
+          this.closeDropdown();
+        }
+      }
+
+      openDropdown() {
+        this.isOpen = true;
+        this.dropdown.classList.remove('hidden');
+        this.positionDropdown();
+      }
+
+      closeDropdown() {
+        this.isOpen = false;
+        this.dropdown.classList.add('hidden');
+        this.users = [];
+        this.selectedIndex = 0;
+      }
+
+      positionDropdown() {
+        // Position dropdown below the textarea
+        const rect = this.textarea.getBoundingClientRect();
+        const parentRect = this.textarea.parentElement.getBoundingClientRect();
+        this.dropdown.style.top = `${this.textarea.offsetHeight + 4}px`;
+        this.dropdown.style.left = '0';
+      }
+
+      renderDropdown() {
+        this.dropdown.innerHTML = this.users.map((user, index) => `
+          <button
+            type="button"
+            class="mention-option w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-center gap-2 ${index === this.selectedIndex ? 'bg-blue-50 text-blue-700' : ''}"
+            data-user-id="${user.id}"
+            data-user-email="${user.email}"
+          >
+            <div class="w-6 h-6 rounded-full bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+              ${user.email[0].toUpperCase()}
+            </div>
+            <span class="truncate">${user.email}</span>
+          </button>
+        `).join('');
+
+        // Add click handlers
+        this.dropdown.querySelectorAll('.mention-option').forEach(option => {
+          option.addEventListener('click', (e) => {
+            e.preventDefault();
+            const userId = parseInt(option.dataset.userId);
+            const userEmail = option.dataset.userEmail;
+            this.selectUser({ id: userId, email: userEmail });
+          });
+        });
+      }
+
+      selectUser(user) {
+        const text = this.textarea.value;
+        const beforeMention = text.substring(0, this.mentionStart);
+        const afterMention = text.substring(this.textarea.selectionStart);
+
+        // Insert the mention
+        const mentionText = `@${user.email}`;
+        this.textarea.value = beforeMention + mentionText + ' ' + afterMention;
+
+        // Move cursor after the mention
+        const newCursorPos = this.mentionStart + mentionText.length + 1;
+        this.textarea.setSelectionRange(newCursorPos, newCursorPos);
+        this.textarea.focus();
+
+        // Track mentioned user
+        this.mentionedUsers.set(user.id, user.email);
+        this.updateHiddenFields();
+
+        this.closeDropdown();
+      }
+
+      updateHiddenFields() {
+        // Clear existing hidden fields
+        this.hiddenContainer.innerHTML = '';
+
+        // Add a hidden field for each mentioned user
+        this.mentionedUsers.forEach((email, id) => {
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = 'feedback_comment[mentioned_user_ids][]';
+          input.value = id;
+          this.hiddenContainer.appendChild(input);
+        });
+      }
+    }
+
+    // Initialize mention autocomplete for main comment form
+    document.addEventListener('DOMContentLoaded', function() {
+      new MentionAutocomplete('main-comment-body', 'main-mention-dropdown', 'main-mentioned-ids-container');
+    });
+
+    // Initialize mention autocomplete for reply forms (called when form is shown)
+    function initReplyMention(commentId) {
+      const textareaId = `reply-body-${commentId}`;
+      const dropdownId = `reply-mention-dropdown-${commentId}`;
+      const containerId = `reply-mentioned-ids-${commentId}`;
+
+      // Only initialize once
+      if (!window.replyMentions) window.replyMentions = {};
+      if (!window.replyMentions[commentId]) {
+        window.replyMentions[commentId] = new MentionAutocomplete(textareaId, dropdownId, containerId);
+      }
+    }
+
+    // Override toggleReplyForm to also initialize mention
+    const originalToggleReplyForm = toggleReplyForm;
+    toggleReplyForm = function(commentId) {
+      originalToggleReplyForm(commentId);
+      const form = document.getElementById('reply-form-' + commentId);
+      if (form && !form.classList.contains('hidden')) {
+        initReplyMention(commentId);
+      }
+    };
+  </script>
+</body>
+</html>

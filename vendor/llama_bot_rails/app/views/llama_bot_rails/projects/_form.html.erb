@@ -1,0 +1,26 @@
+<%= form_with(model: project, url: project.persisted? ? llama_bot_rails.project_path(project) : llama_bot_rails.projects_path, local: true, class: "space-y-4") do |form| %>
+  <% if project.errors.any? %>
+    <div class="alert alert-error">
+      <ul>
+        <% project.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="form-control">
+    <%= form.label :name, class: "label" %>
+    <%= form.text_field :name, class: "input input-bordered w-full", required: true %>
+  </div>
+
+  <div class="form-control">
+    <%= form.label :description, class: "label" %>
+    <%= form.text_area :description, class: "textarea textarea-bordered w-full h-32" %>
+  </div>
+
+  <div class="flex gap-2 pt-4">
+    <%= form.submit class: "btn btn-primary" %>
+    <%= link_to "Cancel", llama_bot_rails.projects_path, class: "btn btn-ghost" %>
+  </div>
+<% end %>

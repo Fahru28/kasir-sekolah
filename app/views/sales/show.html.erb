@@ -1,0 +1,190 @@
+<div class="max-w-4xl mx-auto px-4 py-6 print:max-w-none print:px-0 print:py-0">
+
+  <div class="flex justify-between items-center mb-4 print:hidden">
+    <a href="/sales" class="btn btn-ghost btn-sm gap-1"><i class="fa-solid fa-arrow-left"></i> Kembali</a>
+    <button onclick="window.print()" class="btn btn-primary gap-2 shadow"><i class="fa-solid fa-print"></i> Cetak Kwitansi</button>
+  </div>
+
+  <% if flash[:notice] %><div class="alert alert-success mb-4 print:hidden"><%= flash[:notice] %></div><% end %>
+  <% if flash[:alert] %><div class="alert alert-error mb-4 print:hidden"><%= flash[:alert] %></div><% end %>
+
+  <!-- ===== KWITANSI RESMI ===== -->
+  <div id="kwitansi" class="bg-white text-neutral-900 border-[2.5px] border-neutral-800 print:border-[2.5px] print:shadow-none shadow-xl overflow-hidden">
+    <!-- Double-line top accent -->
+    <div class="h-[6px] bg-emerald-700"></div>
+    <div class="h-[2px] bg-amber-500"></div>
+
+    <!-- KOP SEKOLAH -->
+    <div class="px-6 sm:px-8 pt-6 pb-4 border-b-2 border-neutral-800">
+      <div class="flex gap-4 items-center">
+        <div class="shrink-0 w-[72px] h-[72px] rounded-xl bg-white border-2 border-amber-400 overflow-hidden flex items-center justify-center p-1">
+          <%= image_tag "images.png", alt: "Logo SIT Insantama", class: "w-full h-full object-contain" %>
+        </div>
+        <div class="flex-1 min-w-0 text-center">
+          <p class="text-[11px] tracking-[0.2em] text-emerald-700 font-bold">YAYASAN CAHAYA INSANTAMA RANGKASBITUNG</p>
+          <h1 class="text-xl sm:text-2xl font-black tracking-tight leading-none text-neutral-900">SIT INSANTAMA RANGKASBITUNG</h1>
+          <p class="text-sm font-bold tracking-wide text-neutral-700">Unit Layanan Pendidikan</p>
+          <p class="text-[11px] text-neutral-500 mt-1 leading-tight">Jl. Siliwangi, Kp. Cileuweung RT/RW 002/005, Desa/Kelurahan: RANGKASBITUNG TIMUR</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Judul kwitansi + No -->
+    <div class="px-6 sm:px-8 py-4 flex flex-wrap justify-between items-start gap-4 bg-amber-50/50 border-b border-neutral-200">
+      <div>
+        <h2 class="text-lg font-black tracking-widest">KWITANSI PEMBAYARAN</h2>
+        <p class="text-xs tracking-wide text-neutral-500">Bukti transaksi Unit Layanan Pendidikan — harap disimpan</p>
+      </div>
+      <div class="text-right">
+        <p class="text-xs tracking-widest text-neutral-500">NO. KWITANSI</p>
+        <p class="font-mono font-black text-emerald-700 text-base"><%= @sale.number %></p>
+        <p class="text-xs text-neutral-600 mt-1"><i class="fa-regular fa-calendar mr-1"></i><%= l(@sale.sale_date, format: :long) rescue @sale.sale_date.strftime("%d %B %Y") %></p>
+        <span class="badge badge-sm mt-1 <%= @sale.status == 'Lunas' ? 'bg-emerald-700 text-white border-emerald-700' : 'bg-amber-500 text-neutral-900 border-amber-500' %>"><%= @sale.status %> · <%= @sale.payment_method %></span>
+      </div>
+    </div>
+
+    <!-- Data siswa + ringkasan bayar -->
+    <div class="px-6 sm:px-8 py-4 grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm border-b border-neutral-200">
+      <div class="space-y-1.5">
+        <p class="text-[11px] tracking-widest font-bold text-neutral-500">TELAH DITERIMA DARI</p>
+        <p class="text-base font-bold"><%= @sale.student.name %></p>
+        <p class="text-xs text-neutral-600">Kelas <b><%= @sale.student.class_name %></b> &nbsp;·&nbsp; NIS <b><%= @sale.student.nis %></b> &nbsp;·&nbsp; ID <%= @sale.student.code %></p>
+        <p class="text-xs text-neutral-600">Wali: <%= @sale.student.guardian_name %> &nbsp;·&nbsp; <%= @sale.student.phone %></p>
+        <p class="text-xs text-neutral-500"><%= @sale.student.address %></p>
+      </div>
+      <div class="bg-neutral-900 text-white rounded-xl p-4 flex flex-col justify-center">
+        <p class="text-[11px] tracking-widest text-white/60">JUMLAH PEMBAYARAN</p>
+        <p class="text-2xl font-black tracking-tight"><%= rupiah(@sale.total_amount) %></p>
+        <p class="text-xs text-white/70 mt-1 italic">"<%= terbilang(@sale.total_amount) %> rupiah"</p>
+        <div class="divider my-2 before:bg-white/20 after:bg-white/20"></div>
+        <% if @sale.payment_method == "Tunai" %>
+          <p class="text-xs text-white/80">Tunai dibayar: <b class="text-white"><%= rupiah(@sale.amount_paid) %></b> &nbsp;·&nbsp; Kembali: <b class="text-amber-300"><%= rupiah(@sale.amount_paid.to_i - @sale.total_amount.to_i) %></b></p>
+        <% elsif @sale.payment_method == "Piutang" %>
+          <p class="text-xs">Sisa hutang: <b class="<%= @sale.outstanding > 0 ? 'text-amber-300' : 'text-emerald-300' %>"><%= rupiah(@sale.outstanding) %></b> — <%= @sale.outstanding > 0 ? "Belum Lunas" : "Lunas" %></p>
+        <% else %>
+          <p class="text-xs text-white/80">Metode: <b class="text-white"><%= @sale.payment_method %></b></p>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- Rincian barang -->
+    <div class="px-6 sm:px-8 py-4">
+      <p class="text-[11px] tracking-widest font-bold text-neutral-500 mb-2">RINCIAN BARANG</p>
+      <div class="overflow-x-auto border border-neutral-200 rounded-xl">
+        <table class="table table-sm">
+          <thead>
+            <tr class="bg-neutral-100 text-neutral-700">
+              <th class="text-xs">No</th>
+              <th class="text-xs">Barang</th>
+              <th class="text-center text-xs">Qty</th>
+              <th class="text-right text-xs">Harga Satuan</th>
+              <th class="text-right text-xs">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @sale.sale_items.each_with_index do |it, i| %>
+              <tr>
+                <td class="text-xs text-neutral-500"><%= i+1 %></td>
+                <td>
+                  <span class="font-semibold text-sm"><%= it.product.name %></span>
+                  <span class="text-xs text-neutral-500"> · <%= it.product.code %> · <%= it.product.category %></span>
+                </td>
+                <td class="text-center text-sm"><%= it.quantity %> <%= it.product.unit %></td>
+                <td class="text-right text-sm"><%= rupiah(it.selling_price) %></td>
+                <td class="text-right font-bold text-sm"><%= rupiah(it.subtotal) %></td>
+              </tr>
+            <% end %>
+          </tbody>
+          <tfoot>
+            <tr class="bg-neutral-900 text-white font-bold">
+              <td colspan="2" class="text-right text-xs tracking-widest">TOTAL</td>
+              <td class="text-center text-sm"><%= @sale.total_items %> item</td>
+              <td></td>
+              <td class="text-right text-amber-300"><%= rupiah(@sale.total_amount) %></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tanda tangan -->
+    <div class="px-6 sm:px-8 py-8 grid grid-cols-2 gap-8 text-center text-sm border-t border-neutral-200">
+      <div>
+        <p class="text-xs text-neutral-500">Penerima</p>
+        <div class="h-20"></div>
+        <p class="font-semibold"><%= @sale.student.name %></p>
+      </div>
+      <div>
+        <p class="text-xs text-neutral-500">Rangkasbitung, <%= l(@sale.sale_date, format: :long) rescue @sale.sale_date.strftime("%d %B %Y") %></p>
+        <p class="text-xs text-neutral-500">Petugas</p>
+        <div class="h-20"></div>
+        <p class="font-semibold"><%= current_user.respond_to?(:name) && current_user.name.present? ? current_user.name : current_user.email.split("@").first %></p>
+      </div>
+    </div>
+
+    <!-- Footer kwitansi -->
+    <div class="px-6 sm:px-8 py-3 bg-neutral-50 border-t border-neutral-200 flex flex-wrap justify-between gap-2 text-[11px] text-neutral-500">
+      <span><i class="fa-solid fa-circle-info mr-1"></i> Simpan kwitansi ini sebagai bukti pembayaran yang sah.</span>
+      <span class="font-mono"><%= @sale.number %> · Dicetak <%= Time.current.strftime("%d-%m-%Y %H:%M") %></span>
+    </div>
+  </div>
+
+  <!-- Actions (tidak ikut cetak) -->
+  <div class="flex flex-wrap gap-2 mt-4 print:hidden">
+    <button onclick="window.print()" class="btn btn-outline gap-2"><i class="fa-solid fa-print"></i> Cetak / Simpan PDF</button>
+    <a href="/sales" class="btn btn-ghost gap-1"><i class="fa-solid fa-list"></i> Daftar Penjualan</a>
+    <%= button_to sale_path(@sale), method: :delete, form: { data: { turbo_confirm: "Hapus transaksi ini?" } }, class: "btn btn-ghost text-error gap-1" do %><i class="fa-solid fa-trash"></i> Hapus<% end %>
+  </div>
+
+  <!-- Piutang payments (tidak ikut cetak kwitansi utama) -->
+  <% if @sale.payment_method == "Piutang" %>
+    <div class="card bg-base-100 shadow border border-warning/20 mt-6 print:hidden">
+      <div class="card-body">
+        <h2 class="font-bold flex items-center gap-2"><i class="fa-solid fa-hand-holding-dollar text-warning"></i> Pembayaran Piutang</h2>
+        <div class="flex flex-wrap gap-4 mt-2 text-sm">
+          <span>Total hutang: <b><%= rupiah(@sale.total_amount) %></b></span>
+          <span>Dibayar: <b class="text-success"><%= rupiah(@sale.debt_payments.sum(:amount)) %></b></span>
+          <span>Sisa: <b class="<%= @sale.outstanding > 0 ? 'text-warning' : 'text-success' %>"><%= rupiah(@sale.outstanding) %></b></span>
+        </div>
+        <% if @sale.debt_payments.any? %>
+          <div class="overflow-x-auto mt-3">
+            <table class="table table-sm">
+              <thead><tr><th>Tanggal</th><th>Nominal</th><th>Keterangan</th><th></th></tr></thead>
+              <tbody>
+                <% @sale.debt_payments.order(payment_date: :desc).each do |p| %>
+                  <tr>
+                    <td class="text-sm"><%= p.payment_date %></td>
+                    <td class="font-semibold text-sm"><%= rupiah(p.amount) %></td>
+                    <td class="text-sm opacity-70"><%= p.note %></td>
+                    <td><%= button_to sale_debt_payment_path(@sale, p), method: :delete, class: "btn btn-ghost btn-xs text-error" do %><i class="fa-solid fa-trash"></i><% end %></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% end %>
+        <% if @sale.outstanding > 0 %>
+          <div class="divider my-2"></div>
+          <p class="font-semibold text-sm mb-2">Catat pembayaran</p>
+          <%= form_with model: [@sale, DebtPayment.new], class: "flex flex-wrap gap-2 items-end" do |f| %>
+            <label class="form-control"><span class="label-text text-xs">Tanggal</span><%= f.date_field :payment_date, value: Date.current, class: "input input-bordered input-sm" %></label>
+            <label class="form-control"><span class="label-text text-xs">Nominal</span><%= f.number_field :amount, placeholder: "50000", class: "input input-bordered input-sm w-32" %></label>
+            <label class="form-control flex-1 min-w-[140px]"><span class="label-text text-xs">Keterangan</span><%= f.text_field :note, placeholder: "Cicilan / lunas", class: "input input-bordered input-sm w-full" %></label>
+            <button type="submit" class="btn btn-warning btn-sm gap-1"><i class="fa-solid fa-plus"></i> Simpan</button>
+          <% end %>
+        <% else %>
+          <div class="alert alert-success mt-3 py-2"><i class="fa-solid fa-check"></i> Lunas — semua piutang sudah dibayar</div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+</div>
+
+<style>
+  @media print {
+    @page { margin: 12mm; size: A4; }
+    body { background: white !important; }
+    .navbar, .btn, form, .alert { display: none !important; }
+    #kwitansi { border-width: 2.5px !important; box-shadow: none !important; }
+  }
+</style>

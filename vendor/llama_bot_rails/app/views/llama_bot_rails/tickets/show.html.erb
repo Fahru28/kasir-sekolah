@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html data-theme="light">
+<head>
+  <title><%= @ticket.title %> - LlamaBotRails</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <%= csrf_meta_tags %>
+</head>
+<body>
+  <div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8 relative">
+    <!-- Back to Board - Top Right -->
+    <%= link_to llama_bot_rails.tickets_path, class: "absolute top-4 right-4 btn btn-sm btn-outline" do %>
+      <i class="fas fa-arrow-left"></i> Back to Board
+    <% end %>
+
+    <div class="max-w-4xl mx-auto">
+      <% if flash[:notice] %>
+        <p class="py-2 px-3 bg-green-50 mb-5 text-green-500 font-medium rounded-md inline-block"><%= flash[:notice] %></p>
+      <% end %>
+      <% if flash[:alert] %>
+        <p class="py-2 px-3 bg-red-50 mb-5 text-red-500 font-medium rounded-md inline-block"><%= flash[:alert] %></p>
+      <% end %>
+
+      <!-- Ticket Title -->
+      <div class="mb-6">
+        <h1 class="font-bold text-4xl text-gray-900 leading-tight"><%= @ticket.title %></h1>
+        <% if @ticket.project.present? %>
+          <div class="mt-2">
+            <%= link_to llama_bot_rails.project_path(@ticket.project), class: "badge badge-lg badge-primary gap-1" do %>
+              <i class="fas fa-folder-open"></i> <%= @ticket.project.name %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="mb-6 pb-6 border-b border-gray-200">
+        <div class="flex flex-wrap gap-2">
+          <button id="copy-ticket-btn" class="btn btn-sm btn-primary gap-2" data-ticket-id="<%= @ticket.id %>">
+            <i class="fa-solid fa-copy"></i> Copy Ticket
+          </button>
+          <%= link_to llama_bot_rails.edit_ticket_path(@ticket), class: "btn btn-sm btn-outline" do %>
+            <i class="fas fa-edit"></i> Edit
+          <% end %>
+          <% unless @ticket.status == 'review' || @ticket.status == 'done' %>
+            <button type="button" onclick="moveToReview()" class="btn btn-sm btn-success text-white">
+              <i class="fas fa-check-circle"></i> Move to Review
+            </button>
+          <% end %>
+          <% if @ticket.status == 'review' %>
+            <button type="button" onclick="moveToDone()" class="btn btn-sm btn-success text-white">
+              <i class="fas fa-check-double"></i> Mark Done
+            </button>
+          <% end %>
+          <%= button_to llama_bot_rails.ticket_path(@ticket), method: :delete, class: "btn btn-sm btn-error text-white", data: { turbo_confirm: "Are you sure you want to delete this ticket?" } do %>
+            <i class="fas fa-trash"></i> Delete
+          <% end %>
+        </div>
+      </div>
+
+      <!-- Ticket Details -->
+      <div class="bg-white rounded-lg shadow-sm p-6 space-y-6">
+        <!-- Description -->
+        <div>
+          <strong class="block font-medium mb-2 text-gray-700">Description:</strong>
+          <% if @ticket.description.present? %>
+            <div class="prose prose-sm max-w-none text-gray-600">
+              <%= render_markdown(@ticket.description) %>
+            </div>
+          <% else %>
+            <p class="text-gray-400 italic">No description provided.</p>
+          <% end %>
+        </div>
+
+        <!-- Status and Points Row -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Status Badge -->
+          <div>
+            <strong class="block font-medium mb-2 text-gray-700">Status:</strong>
+            <%
+              status_color = case @ticket.status
+                             when 'backlog' then 'bg-gray-500'
+                             when 'assigned' then 'bg-blue-500'
+                             when 'in_progress' then 'bg-amber-500'
+                             when 'review' then 'bg-purple-500'
+                             when 'incomplete' then 'bg-red-500'
+                             when 'done' then 'bg-green-500'
+                             else 'bg-gray-400'
+                             end
+            %>
+            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-white text-sm font-medium <%= status_color %>">
+              <i class="fas <%= status_icon(@ticket.status) %>"></i>
+              <%= @ticket.status.humanize %>
+            </span>
+          </div>
+
+          <!-- Points Estimate -->
+          <% if @ticket.points_estimate.present? %>
+            <div>
+              <strong class="block font-medium mb-2 text-gray-700">Points Estimate:</strong>
+              <span class="badge badge-lg badge-outline"><%= @ticket.points_estimate %> pts</span>
+            </div>
+          <% end %>
+
+          <!-- Points Actual -->
+          <% if @ticket.points_actual.present? %>
+            <div>
+              <strong class="block font-medium mb-2 text-gray-700">Points Actual:</strong>
+              <span class="badge badge-lg badge-success"><%= @ticket.points_actual %> pts</span>
+            </div>
+          <% end %>
+        </div>
+
+        <!-- Position -->
+        <% if @ticket.position.present? %>
+          <div>
+            <strong class="block font-medium mb-1 text-gray-700">Position:</strong>
+            <span class="text-gray-600"><%= @ticket.position %></span>
+          </div>
+        <% end %>
+
+        <!-- Ticket Type -->
+        <% if @ticket.ticket_type.present? %>
+          <div>
+            <strong class="block font-medium mb-1 text-gray-700">Ticket Type:</strong>
+            <span class="badge badge-outline"><%= @ticket.ticket_type.titleize %></span>
+          </div>
+        <% end %>
+
+        <!-- Agent Result -->
+        <% if @ticket.agent_result.present? %>
+          <div>
+            <strong class="block font-medium mb-1 text-gray-700">Agent Result:</strong>
+            <span class="badge <%= @ticket.agent_result == 'failed' ? 'badge-error' : 'badge-success' %>">
+              <%= @ticket.agent_result.titleize %>
+            </span>
+          </div>
+        <% end %>
+
+        <!-- Attached Media (Images & Videos) -->
+        <% if @ticket.images.attached? %>
+          <div class="pt-4 border-t border-gray-200">
+            <strong class="block font-medium mb-3 text-gray-700">
+              <i class="fas fa-paperclip text-blue-500"></i> Attachments (<%= @ticket.images.count %>)
+            </strong>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <% @ticket.images.each do |attachment| %>
+                <div class="relative group bg-gray-100 rounded-lg overflow-hidden">
+                  <% if attachment.image? %>
+                    <%= link_to main_app.rails_blob_path(attachment, disposition: 'inline'), target: '_blank', class: "block" do %>
+                      <%= image_tag main_app.rails_blob_path(attachment), class: "w-full h-32 object-cover hover:opacity-90 transition-opacity" %>
+                    <% end %>
+                  <% elsif attachment.video? %>
+                    <div class="relative cursor-pointer" onclick="openVideoModal('<%= main_app.rails_blob_path(attachment, disposition: 'inline') %>', '<%= attachment.content_type %>')">
+                      <video class="w-full h-32 object-cover" preload="metadata" muted>
+                        <source src="<%= main_app.rails_blob_path(attachment, disposition: 'inline') %>" type="<%= attachment.content_type %>">
+                      </video>
+                      <div class="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors">
+                        <i class="fas fa-play-circle text-white text-4xl"></i>
+                      </div>
+                    </div>
+                  <% else %>
+                    <%= link_to main_app.rails_blob_path(attachment, disposition: 'attachment'), class: "block h-32 flex items-center justify-center" do %>
+                      <i class="fas fa-file text-gray-400 text-3xl"></i>
+                    <% end %>
+                  <% end %>
+
+                  <!-- Share Button -->
+                  <button
+                    class="absolute top-2 right-2 btn btn-xs btn-circle btn-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                    onclick="event.stopPropagation(); shareAttachment(<%= attachment.id %>)"
+                    title="Get shareable link"
+                  >
+                    <i class="fas fa-share-alt text-xs"></i>
+                  </button>
+
+                  <!-- Filename -->
+                  <p class="text-xs text-gray-600 truncate p-2 bg-white"><%= attachment.filename %></p>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+
+        <!-- Video Modal -->
+        <dialog id="video-modal" class="modal">
+          <div class="modal-box max-w-4xl p-0 bg-black">
+            <video id="modal-video" controls autoplay class="w-full">
+              <source id="modal-video-source" src="" type="">
+            </video>
+            <form method="dialog" class="absolute top-2 right-2">
+              <button class="btn btn-sm btn-circle btn-ghost text-white hover:bg-white/20">
+                <i class="fas fa-times"></i>
+              </button>
+            </form>
+          </div>
+          <form method="dialog" class="modal-backdrop">
+            <button>close</button>
+          </form>
+        </dialog>
+
+        <!-- Share Modal -->
+        <dialog id="share-modal" class="modal">
+          <div class="modal-box">
+            <h3 class="font-bold text-lg mb-4"><i class="fas fa-share-alt text-primary mr-2"></i>Share Link</h3>
+            <p class="text-sm text-gray-500 mb-3">Anyone with this link can view the file:</p>
+            <div class="flex gap-2">
+              <input type="text" id="share-url" class="input input-bordered flex-1" readonly />
+              <button onclick="copyShareUrl()" class="btn btn-primary" id="copy-share-btn">
+                <i class="fas fa-copy"></i>
+              </button>
+            </div>
+            <div class="modal-action">
+              <form method="dialog">
+                <button class="btn">Close</button>
+              </form>
+            </div>
+          </div>
+          <form method="dialog" class="modal-backdrop">
+            <button>close</button>
+          </form>
+        </dialog>
+
+        <!-- Research Notes -->
+        <% if @ticket.research_notes.present? %>
+          <div class="pt-4 border-t border-gray-200">
+            <strong class="block font-medium mb-2 text-gray-700">
+              <i class="fas fa-search text-purple-500"></i> Research Notes:
+            </strong>
+            <div class="prose prose-sm max-w-none text-gray-600 bg-purple-50 p-4 rounded-lg border border-purple-100">
+              <%= render_markdown(@ticket.research_notes) %>
+            </div>
+          </div>
+        <% end %>
+
+        <!-- Notes -->
+        <% if @ticket.notes.present? %>
+          <div class="pt-4 border-t border-gray-200">
+            <strong class="block font-medium mb-2 text-gray-700">Notes:</strong>
+            <div class="prose prose-sm max-w-none text-gray-600 bg-gray-50 p-4 rounded-lg">
+              <%= render_markdown(@ticket.notes) %>
+            </div>
+          </div>
+        <% end %>
+
+        <!-- Agent Notes -->
+        <% if @ticket.agent_notes.present? %>
+          <div class="pt-4 border-t border-gray-200">
+            <strong class="block font-medium mb-2 text-gray-700">
+              <i class="fas fa-robot text-blue-500"></i> Agent Notes:
+            </strong>
+            <div class="prose prose-sm max-w-none text-gray-600 bg-blue-50 p-4 rounded-lg border border-blue-100">
+              <%= render_markdown(@ticket.agent_notes) %>
+            </div>
+          </div>
+        <% end %>
+
+        <!-- LangSmith Traces -->
+        <% if @ticket.traces.any? || @ticket.langsmith_url.present? %>
+          <div class="pt-4 border-t border-gray-200">
+            <strong class="block font-medium mb-3 text-gray-700">
+              <i class="fas fa-project-diagram text-purple-500"></i> LangSmith Traces
+            </strong>
+            <div class="space-y-2">
+              <% @ticket.traces.chronological.each do |trace| %>
+                <div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                  <div class="flex items-center gap-3">
+                    <%
+                      trace_badge_class = case trace.trace_type
+                                          when 'creation' then 'badge-info'
+                                          when 'implementation' then 'badge-success'
+                                          when 'debugging' then 'badge-warning'
+                                          else 'badge-ghost'
+                                          end
+                    %>
+                    <span class="badge <%= trace_badge_class %>"><%= trace.trace_type.titleize %></span>
+                    <% if trace.model.present? %>
+                      <span class="text-sm text-gray-500"><%= trace.model %></span>
+                    <% end %>
+                    <% if trace.tokens_used.present? %>
+                      <span class="text-sm text-gray-500"><%= number_with_delimiter(trace.tokens_used) %> tokens</span>
+                    <% end %>
+                  </div>
+                  <% if trace.langsmith_url_with_fallback %>
+                    <%= link_to trace.langsmith_url_with_fallback, trace.langsmith_url_with_fallback, target: "_blank", class: "link link-primary text-sm" %>
+                  <% end %>
+                </div>
+              <% end %>
+
+              <!-- Legacy LangSmith URL -->
+              <% if @ticket.langsmith_url.present? && @ticket.traces.empty? %>
+                <div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                  <span class="badge badge-ghost">Legacy</span>
+                  <%= link_to @ticket.langsmith_url, @ticket.langsmith_url, target: "_blank", class: "link link-primary text-sm break-all" %>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+
+        <!-- LLM Tracking -->
+        <% if @ticket.llm_model.present? || @ticket.tokens_to_create_ticket.present? || @ticket.work_started_at.present? %>
+          <div class="pt-4 border-t border-gray-200">
+            <strong class="block font-medium mb-3 text-gray-700">
+              <i class="fas fa-robot text-purple-500"></i> LLM Tracking
+            </strong>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm bg-gray-50 p-4 rounded-lg">
+              <% if @ticket.llm_model.present? %>
+                <div>
+                  <span class="text-gray-500">Model:</span>
+                  <span class="font-medium"><%= @ticket.llm_model %></span>
+                </div>
+              <% end %>
+              <% if @ticket.tokens_to_create_ticket.present? %>
+                <div>
+                  <span class="text-gray-500">Tokens (Creation):</span>
+                  <span class="font-medium"><%= number_with_delimiter(@ticket.tokens_to_create_ticket) %></span>
+                </div>
+              <% end %>
+              <% if @ticket.tokens_to_implement_ticket.present? %>
+                <div>
+                  <span class="text-gray-500">Tokens (Implementation):</span>
+                  <span class="font-medium"><%= number_with_delimiter(@ticket.tokens_to_implement_ticket) %></span>
+                </div>
+              <% end %>
+              <% if @ticket.total_tokens > 0 %>
+                <div>
+                  <span class="text-gray-500">Total Tokens:</span>
+                  <span class="font-medium"><%= number_with_delimiter(@ticket.total_tokens) %></span>
+                </div>
+              <% end %>
+              <% if @ticket.work_started_at.present? %>
+                <div>
+                  <span class="text-gray-500">Work Started:</span>
+                  <span class="font-medium"><%= @ticket.work_started_at.strftime("%Y-%m-%d %H:%M") %></span>
+                </div>
+              <% end %>
+              <% if @ticket.work_completed_at.present? %>
+                <div>
+                  <span class="text-gray-500">Work Completed:</span>
+                  <span class="font-medium"><%= @ticket.work_completed_at.strftime("%Y-%m-%d %H:%M") %></span>
+                </div>
+              <% end %>
+              <% if @ticket.work_duration.present? %>
+                <div>
+                  <span class="text-gray-500">Duration:</span>
+                  <span class="font-medium"><%= @ticket.work_duration_in_minutes %> minutes</span>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+
+        <!-- Comments Section -->
+        <div class="pt-4 border-t border-gray-200">
+          <strong class="block font-medium mb-3 text-gray-700">
+            <i class="fas fa-comments text-green-500"></i> Comments (<%= @ticket.comments.count %>)
+          </strong>
+
+          <!-- Comment Form -->
+          <%= form_with model: LlamaBotRails::TicketComment.new, url: llama_bot_rails.ticket_comments_path(@ticket), local: true, class: "mb-4" do |f| %>
+            <div class="flex flex-col gap-2">
+              <div class="flex gap-2">
+                <%= f.text_field :author_name, placeholder: "Your name (optional)", class: "input input-bordered input-sm w-40" %>
+              </div>
+              <div class="flex gap-2">
+                <%= f.text_area :body, placeholder: "Add a comment...", rows: 2, class: "textarea textarea-bordered flex-1", required: true %>
+                <%= f.submit "Post", class: "btn btn-primary btn-sm" %>
+              </div>
+            </div>
+          <% end %>
+
+          <!-- Comment List -->
+          <% if @ticket.comments.any? %>
+            <div class="space-y-3">
+              <% @ticket.comments.chronological.each do |comment| %>
+                <div class="bg-gray-50 p-3 rounded-lg">
+                  <div class="flex justify-between items-start mb-2">
+                    <span class="font-medium text-gray-700"><%= comment.display_author %></span>
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs text-gray-500"><%= comment.created_at.strftime("%b %d, %Y %H:%M") %></span>
+                      <%= button_to llama_bot_rails.ticket_comment_path(@ticket, comment), method: :delete, class: "btn btn-xs btn-ghost text-error", data: { turbo_confirm: "Delete this comment?" } do %>
+                        <i class="fas fa-trash"></i>
+                      <% end %>
+                    </div>
+                  </div>
+                  <div class="prose prose-sm max-w-none text-gray-600">
+                    <%= render_markdown(comment.body) %>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          <% else %>
+            <p class="text-gray-400 italic text-sm">No comments yet. Be the first to comment!</p>
+          <% end %>
+        </div>
+
+        <!-- Timestamps -->
+        <div class="pt-4 border-t border-gray-200 text-sm text-gray-500">
+          <p><strong>Created:</strong> <%= @ticket.created_at.strftime("%B %d, %Y at %H:%M") %></p>
+          <p><strong>Updated:</strong> <%= @ticket.updated_at.strftime("%B %d, %Y at %H:%M") %></p>
+        </div>
+      </div>
+
+      <!-- Bottom Action Buttons -->
+      <div class="mt-6 flex flex-wrap gap-2">
+        <%= link_to llama_bot_rails.edit_ticket_path(@ticket), class: "btn btn-sm btn-outline" do %>
+          <i class="fas fa-edit"></i> Edit
+        <% end %>
+      </div>
+    </div>
+  </div>
+  <script>
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+
+    function moveToReview() {
+      moveTicketTo('review', 'Review');
+    }
+
+    function moveToDone() {
+      moveTicketTo('done', 'Done');
+    }
+
+    function openVideoModal(src, type) {
+      const modal = document.getElementById('video-modal');
+      const video = document.getElementById('modal-video');
+      const source = document.getElementById('modal-video-source');
+      source.src = src;
+      source.type = type;
+      video.load();
+      modal.showModal();
+    }
+
+    function shareAttachment(attachmentId) {
+      fetch(`<%= llama_bot_rails.ticket_path(@ticket) %>/share_attachment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
+        body: JSON.stringify({ attachment_id: attachmentId })
+      })
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('share-url').value = data.url;
+        document.getElementById('share-modal').showModal();
+      })
+      .catch(err => {
+        console.error('Failed to create share link:', err);
+        alert('Failed to create share link');
+      });
+    }
+
+    function copyShareUrl() {
+      const input = document.getElementById('share-url');
+      input.select();
+      input.setSelectionRange(0, 99999);
+      document.execCommand('copy');
+
+      const btn = document.getElementById('copy-share-btn');
+      const originalHtml = btn.innerHTML;
+      btn.innerHTML = '<i class="fas fa-check"></i>';
+      btn.classList.add('btn-success');
+      btn.classList.remove('btn-primary');
+      setTimeout(() => {
+        btn.innerHTML = originalHtml;
+        btn.classList.remove('btn-success');
+        btn.classList.add('btn-primary');
+      }, 2000);
+    }
+
+    function moveTicketTo(status, statusLabel) {
+      fetch(`<%= llama_bot_rails.ticket_path(@ticket) %>/move`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
+        body: JSON.stringify({
+          status: status,
+          position: 0
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          location.reload();
+        } else {
+          alert('Failed to move ticket: ' + (data.error || 'Unknown error'));
+        }
+      })
+      .catch(error => {
+        console.error('Error moving ticket:', error);
+        alert('Failed to move ticket');
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      const copyBtn = document.getElementById('copy-ticket-btn');
+
+      if (copyBtn) {
+        copyBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          const ticketId = this.dataset.ticketId;
+
+          // Fetch the ticket data from the server
+          fetch(`<%= llama_bot_rails.ticket_path(@ticket) %>.json`)
+            .then(response => response.json())
+            .then(data => {
+              const ticketType = data.ticket_type || '';
+
+              // Helper to unescape literal \n to actual newlines
+              const unescape = (str) => str ? str.replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\'/g, "'") : '';
+
+              // Build the copy text
+              let copyText = `# ${unescape(data.title)}\n\n`;
+
+              if (data.status) {
+                copyText += `**Status:** ${data.status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}\n\n`;
+              }
+
+              if (ticketType) {
+                copyText += `**Type:** ${ticketType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}\n\n`;
+              }
+
+              if (data.description) {
+                copyText += `## Description\n\n${unescape(data.description)}\n\n`;
+              }
+
+              if (data.notes) {
+                copyText += `## Notes\n\n${unescape(data.notes)}\n\n`;
+              }
+
+              if (data.agent_notes) {
+                copyText += `## Agent Notes\n\n${unescape(data.agent_notes)}\n\n`;
+              }
+
+              // Try clipboard API first
+              if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(copyText).then(() => {
+                  showSuccess(copyBtn);
+                }).catch(() => {
+                  fallbackCopy(copyText, copyBtn);
+                });
+              } else {
+                fallbackCopy(copyText, copyBtn);
+              }
+            })
+            .catch(err => {
+              console.error('Failed to fetch ticket:', err);
+              alert('Failed to copy ticket data.');
+            });
+        });
+      }
+
+      function fallbackCopy(text, button) {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+
+        try {
+          document.execCommand('copy');
+          showSuccess(button);
+        } catch (err) {
+          console.error('Fallback copy failed:', err);
+          alert('Failed to copy. You can manually copy the content.');
+        } finally {
+          document.body.removeChild(textarea);
+        }
+      }
+
+      function showSuccess(button) {
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
+        button.classList.add('btn-success');
+
+        setTimeout(() => {
+          button.innerHTML = originalText;
+          button.classList.remove('btn-success');
+        }, 2000);
+      }
+    });
+  </script>
+</body>
+</html>

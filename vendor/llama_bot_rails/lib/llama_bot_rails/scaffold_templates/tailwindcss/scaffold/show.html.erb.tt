@@ -1,0 +1,52 @@
+<%
+  detail_attributes = attributes.reject(&:password_digest?)
+-%>
+<%% content_for :title, "<%= human_name %>" %>
+
+<%%# Renders inside the shared record drawer when fetched through the
+    "record_drawer" Turbo Frame, and as a normal full page on direct visits. %>
+<%%= llama_record_frame do %>
+  <div class="mx-auto max-w-xl">
+    <h2 class="mb-4 text-lg font-semibold text-gray-900"><%= human_name %> details</h2>
+
+    <dl class="space-y-4">
+<% detail_attributes.each do |attribute| -%>
+      <div>
+        <dt class="text-xs font-medium uppercase tracking-wider text-gray-500"><%= attribute.human_name %></dt>
+<% if attribute.attachment? -%>
+        <dd class="mt-1 text-sm text-gray-900">
+          <%%= link_to @<%= singular_table_name %>.<%= attribute.column_name %>.filename, @<%= singular_table_name %>.<%= attribute.column_name %> if @<%= singular_table_name %>.<%= attribute.column_name %>.attached? %>
+        </dd>
+<% elsif attribute.attachments? -%>
+        <dd class="mt-1 text-sm text-gray-900">
+          <%% @<%= singular_table_name %>.<%= attribute.column_name %>.each do |<%= attribute.singular_name %>| %>
+            <div><%%= link_to <%= attribute.singular_name %>.filename, <%= attribute.singular_name %> %></div>
+          <%% end %>
+        </dd>
+<% elsif attribute.type&.to_sym == :boolean -%>
+        <dd class="mt-1 text-sm text-gray-900"><%%= @<%= singular_table_name %>.<%= attribute.column_name %> ? "Yes" : "No" %></dd>
+<% elsif attribute.type&.to_sym == :text -%>
+        <dd class="mt-1 whitespace-pre-wrap text-sm text-gray-900"><%%= @<%= singular_table_name %>.<%= attribute.column_name %> %></dd>
+<% else -%>
+        <dd class="mt-1 text-sm text-gray-900"><%%= @<%= singular_table_name %>.<%= attribute.column_name %> %></dd>
+<% end -%>
+      </div>
+<% end -%>
+      <div>
+        <dt class="text-xs font-medium uppercase tracking-wider text-gray-500">Created</dt>
+        <dd class="mt-1 text-sm text-gray-900"><%%= @<%= singular_table_name %>.created_at&.strftime("%b %-d, %Y %H:%M") %></dd>
+      </div>
+    </dl>
+
+    <div class="mt-6 flex items-center gap-3 border-t border-gray-100 pt-4">
+      <%%= link_to "Edit", <%= edit_helper(type: :path) %>,
+            class: "rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-500" %>
+      <%%= button_to "Delete", <%= model_resource_name(prefix: "@") %>, method: :delete,
+            form: { data: { turbo_frame: "_top", turbo_confirm: "Delete this <%= human_name.downcase %>?" } },
+            class: "rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50" %>
+      <%%= link_to "All <%= human_name.pluralize.downcase %>", <%= index_helper(type: :path) %>,
+            data: { turbo_frame: "_top" },
+            class: "px-2 py-2 text-sm text-gray-500 hover:text-gray-800 hover:underline" %>
+    </div>
+  </div>
+<%% end %>

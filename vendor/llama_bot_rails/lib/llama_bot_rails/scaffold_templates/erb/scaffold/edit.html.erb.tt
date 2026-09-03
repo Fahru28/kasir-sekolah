@@ -1,0 +1,15 @@
+<%% content_for :title, "Editing <%= human_name.downcase %>" %>
+
+<%%= llama_record_frame do %>
+  <div class="mx-auto max-w-xl">
+    <h2 class="mb-4 text-lg font-semibold text-gray-900">Editing <%= human_name.downcase %></h2>
+
+    <%%= render "form", <%= singular_table_name %>: @<%= singular_table_name %> %>
+
+    <p class="mt-4">
+      <%%= link_to "Back to <%= human_name.pluralize.downcase %>", <%= index_helper(type: :path) %>,
+            data: { turbo_frame: "_top" },
+            class: "text-sm text-gray-500 hover:text-gray-800 hover:underline" %>
+    </p>
+  </div>
+<%% end %>

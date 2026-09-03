@@ -1,0 +1,40 @@
+<div class="max-w-5xl mx-auto px-4 py-6">
+  <a href="/students" class="btn btn-ghost btn-sm gap-1 mb-4"><i class="fa-solid fa-arrow-left"></i> Daftar Siswa</a>
+  <div class="card bg-base-100 shadow border border-base-200">
+    <div class="card-body">
+      <div class="flex justify-between">
+        <div>
+          <h1 class="text-2xl font-bold"><%= @student.name %></h1>
+          <p class="text-sm opacity-60 font-mono"><%= @student.code %> · NIS <%= @student.nis %> · Kelas <%= @student.class_name %></p>
+          <p class="text-sm mt-2">Wali: <b><%= @student.guardian_name %></b> · <%= @student.phone %><br><span class="text-xs opacity-60"><%= @student.address %></span></p>
+        </div>
+        <a href="/students/<%= @student.id %>/edit" class="btn btn-outline btn-sm">Edit</a>
+      </div>
+      <div class="divider my-2"></div>
+      <h2 class="font-bold">Riwayat Pembelian & Piutang</h2>
+      <% if @sales.any? %>
+        <div class="overflow-x-auto mt-2">
+          <table class="table table-sm">
+            <thead><tr><th>No</th><th>Tanggal</th><th>Total</th><th>Metode</th><th>Status</th><th>Sisa Hutang</th><th></th></tr></thead>
+            <tbody>
+              <% @sales.each do |s| %>
+                <tr>
+                  <td class="font-mono text-xs"><a href="/sales/<%= s.id %>" class="link link-primary"><%= s.number %></a></td>
+                  <td class="text-sm"><%= s.sale_date %></td>
+                  <td class="font-semibold text-sm"><%= rupiah(s.total_amount) %></td>
+                  <td><span class="badge badge-ghost badge-sm"><%= s.payment_method %></span></td>
+                  <td><span class="badge badge-sm <%= s.status == 'Lunas' ? 'badge-success' : 'badge-warning' %>"><%= s.status %></span></td>
+                  <td class="text-sm <%= s.outstanding > 0 ? 'text-warning font-bold' : 'opacity-50' %>"><%= rupiah(s.outstanding) %></td>
+                  <td><a href="/sales/<%= s.id %>" class="btn btn-ghost btn-xs">Detail</a></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-sm mt-3">Total hutang berjalan: <b class="text-warning"><%= rupiah(@sales.sum { |s| s.outstanding }) %></b></p>
+      <% else %>
+        <p class="text-sm opacity-60 mt-2">Belum ada transaksi untuk siswa ini.</p>
+      <% end %>
+    </div>
+  </div>
+</div>

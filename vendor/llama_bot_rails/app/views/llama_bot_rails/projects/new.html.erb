@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html data-theme="light">
+<head>
+  <title>New Project - LlamaBotRails</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <%= csrf_meta_tags %>
+</head>
+<body>
+  <div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8">
+    <div class="max-w-2xl mx-auto">
+      <div class="flex items-center gap-4 mb-6">
+        <%= link_to llama_bot_rails.projects_path, class: "btn btn-sm btn-outline" do %>
+          <i class="fas fa-arrow-left"></i> Back
+        <% end %>
+        <h1 class="text-3xl font-bold text-gray-900">New Project</h1>
+      </div>
+
+      <div class="bg-white rounded-lg shadow-sm p-6">
+        <%= render "form", project: @project %>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<%= form_with model: release, url: release.persisted? ? release_path(release) : releases_path, class: "space-y-6" do |f| %>
+  <% if release.errors.any? %>
+    <div class="alert alert-error">
+      <i class="fas fa-exclamation-circle"></i>
+      <div>
+        <h3 class="font-bold">Please fix the following errors:</h3>
+        <ul class="list-disc list-inside">
+          <% release.errors.full_messages.each do |message| %>
+            <li><%= message %></li>
+          <% end %>
+        </ul>
+      </div>
+    </div>
+  <% end %>
+
+  <div class="form-control">
+    <%= f.label :version, class: "label" do %>
+      <span class="label-text font-semibold">Version</span>
+    <% end %>
+    <%= f.text_field :version, class: "input input-bordered w-full font-mono", placeholder: "e.g. 0.4.1" %>
+    <span class="label-text-alt text-gray-400 mt-1">Match the image tag so users running this version see the "Your version" badge.</span>
+  </div>
+
+  <div class="form-control">
+    <%= f.label :title, class: "label" do %>
+      <span class="label-text font-semibold">Title</span>
+    <% end %>
+    <%= f.text_field :title, class: "input input-bordered w-full", placeholder: "Short headline (optional)" %>
+  </div>
+
+  <div class="form-control">
+    <%= f.label :notes, class: "label" do %>
+      <span class="label-text font-semibold">Update notes</span>
+    <% end %>
+    <%= f.text_area :notes, class: "textarea textarea-bordered w-full h-64 font-mono text-sm", placeholder: "Markdown supported. Use bullet points for changes..." %>
+    <span class="label-text-alt text-gray-400 mt-1">Markdown is supported (rendered when users read the release).</span>
+  </div>
+
+  <div class="form-control">
+    <%= f.label :released_at, class: "label" do %>
+      <span class="label-text font-semibold">Release date</span>
+    <% end %>
+    <%= f.datetime_local_field :released_at, class: "input input-bordered w-full",
+          value: release.released_at&.strftime("%Y-%m-%dT%H:%M") %>
+  </div>
+
+  <div class="form-control">
+    <label class="label cursor-pointer justify-start gap-3">
+      <%= f.check_box :published, class: "checkbox checkbox-primary" %>
+      <span class="label-text font-semibold">Published</span>
+      <span class="label-text-alt text-gray-400">Drafts are visible to admins only.</span>
+    </label>
+  </div>
+
+  <div class="flex justify-end gap-3 pt-4">
+    <%= link_to "Cancel", release.persisted? ? release_path(release) : releases_path, class: "btn btn-ghost" %>
+    <%= f.submit release.persisted? ? "Update Release" : "Create Release", class: "btn btn-primary" %>
+  </div>
+<% end %>

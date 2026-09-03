@@ -1,0 +1,11 @@
+What's new in <%= @release.version %>
+<% if @release.title.present? %><%= @release.title %>
+<% end %>
+<% if @release.released_at %><%= @release.released_at.strftime("%B %-d, %Y") %>
+<% end %>
+<% if @release.notes.present? %>
+<%= @release.notes %>
+<% end %>
+<% if @url %>
+View the full release notes: <%= @url %>
+<% end %>

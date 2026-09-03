@@ -1,0 +1,49 @@
+<%%= form_with(model: <%= model_resource_name %>) do |form| %>
+  <%% if <%= singular_table_name %>.errors.any? %>
+    <div class="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+      <h2 class="font-semibold"><%%= pluralize(<%= singular_table_name %>.errors.count, "error") %> prohibited this <%= human_name.downcase %> from being saved:</h2>
+      <ul class="mt-1 list-disc pl-5">
+        <%% <%= singular_table_name %>.errors.each do |error| %>
+          <li><%%= error.full_message %></li>
+        <%% end %>
+      </ul>
+    </div>
+  <%% end %>
+
+<% attributes.each do |attribute| -%>
+<% if attribute.password_digest? -%>
+  <div class="mb-4">
+    <%%= form.label :password, class: "block text-sm font-medium text-gray-700 mb-1" %>
+    <%%= form.password_field :password, class: "block w-full rounded-md border border-gray-300 px-3 py-2 text-sm" %>
+  </div>
+
+  <div class="mb-4">
+    <%%= form.label :password_confirmation, class: "block text-sm font-medium text-gray-700 mb-1" %>
+    <%%= form.password_field :password_confirmation, class: "block w-full rounded-md border border-gray-300 px-3 py-2 text-sm" %>
+  </div>
+<% elsif attribute.attachments? -%>
+  <div class="mb-4">
+    <%%= form.label :<%= attribute.column_name %>, class: "block text-sm font-medium text-gray-700 mb-1" %>
+    <%%= form.<%= attribute.field_type %> :<%= attribute.column_name %>, multiple: true, class: "block w-full text-sm" %>
+  </div>
+<% elsif attribute.field_type == :check_box -%>
+  <div class="mb-4 flex items-center gap-2">
+    <%%= form.check_box :<%= attribute.column_name %>, class: "h-4 w-4 rounded border-gray-300" %>
+    <%%= form.label :<%= attribute.column_name %>, class: "text-sm font-medium text-gray-700" %>
+  </div>
+<% elsif attribute.field_type == :text_area -%>
+  <div class="mb-4">
+    <%%= form.label :<%= attribute.column_name %>, class: "block text-sm font-medium text-gray-700 mb-1" %>
+    <%%= form.text_area :<%= attribute.column_name %>, rows: 4, class: "block w-full rounded-md border border-gray-300 px-3 py-2 text-sm" %>
+  </div>
+<% else -%>
+  <div class="mb-4">
+    <%%= form.label :<%= attribute.column_name %>, class: "block text-sm font-medium text-gray-700 mb-1" %>
+    <%%= form.<%= attribute.field_type %> :<%= attribute.column_name %>, class: "block w-full rounded-md border border-gray-300 px-3 py-2 text-sm" %>
+  </div>
+<% end -%>
+<% end -%>
+  <div class="mt-6">
+    <%%= form.submit class: "rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500" %>
+  </div>
+<%% end %>

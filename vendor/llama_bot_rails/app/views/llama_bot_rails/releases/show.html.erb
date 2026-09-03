@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html data-theme="light">
+<head>
+  <title><%= request.host %> | <%= @release.version %></title>
+  <%= render "head" %>
+</head>
+<body class="bg-base-200 min-h-screen">
+  <div class="max-w-3xl mx-auto px-4 py-8">
+    <%= link_to releases_path, class: "btn btn-ghost btn-sm mb-4" do %>
+      <i class="fas fa-arrow-left mr-1"></i> All releases
+    <% end %>
+
+    <div class="card bg-base-100 shadow-sm border <%= @release.current? ? 'border-primary' : 'border-base-300' %>">
+      <div class="card-body">
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="badge badge-lg font-mono"><%= @release.version %></span>
+            <% if @release.current? %>
+              <span class="badge badge-primary badge-sm">Your version</span>
+            <% end %>
+            <% unless @release.published %>
+              <span class="badge badge-ghost badge-sm">Draft</span>
+            <% end %>
+          </div>
+          <% if @release.released_at %>
+            <span class="text-sm text-gray-400"><%= @release.released_at.strftime("%B %-d, %Y") %></span>
+          <% end %>
+        </div>
+
+        <% if @release.title.present? %>
+          <h1 class="text-2xl font-bold mt-2"><%= @release.title %></h1>
+        <% end %>
+
+        <% if @release.notes.present? %>
+          <div class="prose prose-sm max-w-none mt-4 release-notes" data-notes="<%= @release.notes %>"></div>
+        <% else %>
+          <p class="text-gray-400 mt-4">No notes for this release.</p>
+        <% end %>
+
+        <% if can?(:manage_releases) %>
+          <div class="card-actions justify-end mt-6 pt-4 border-t border-base-200">
+            <%= link_to "Edit", edit_release_path(@release), class: "btn btn-ghost btn-sm" %>
+            <%= button_to "Delete", release_path(@release), method: :delete,
+                  class: "btn btn-ghost btn-sm text-error",
+                  form: { data: { turbo_confirm: "Delete release #{@release.version}?" } } %>
+            <%= button_to notify_release_path(@release), method: :post, class: "btn btn-primary btn-sm" do %>
+              <i class="fas fa-envelope mr-1"></i>
+              <%= @release.emailed_at ? "Re-send email" : "Email this release" %>
+            <% end %>
+          </div>
+          <% if @release.emailed_at %>
+            <p class="text-xs text-gray-400 text-right">Last emailed <%= @release.emailed_at.strftime("%b %-d, %Y at %l:%M %p") %></p>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <%= render "markdown_script" %>
+</body>
+</html>

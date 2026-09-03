@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Spec page</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <%# A forgetful layout: it never sets window.llamapressConfig. Stands in for
+        the base image's application.html.erb and every Leo-generated layout. %>
+    <%# Stands in for javascript_importmap_tags — deferred, so the injected
+        config must land ABOVE it to be there when feedback_bubble.js runs. %>
+    <script type="module" src="/assets/application.js"></script>
+  </head>
+
+  <body>
+    <%= yield %>
+  </body>
+</html>

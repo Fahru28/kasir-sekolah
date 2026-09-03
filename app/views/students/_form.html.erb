@@ -1,0 +1,17 @@
+<%= form_with model: @student, class: "space-y-4" do |f| %>
+  <% if @student.errors.any? %><div class="alert alert-error text-sm"><%= @student.errors.full_messages.join(", ") %></div><% end %>
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <label class="form-control"><span class="label-text">ID Anak</span><%= f.text_field :code, class: "input input-bordered", placeholder: "A-011" %></label>
+    <label class="form-control"><span class="label-text">NIS</span><%= f.text_field :nis, class: "input input-bordered", placeholder: "1011" %></label>
+    <label class="form-control"><span class="label-text">Nama Lengkap</span><%= f.text_field :name, class: "input input-bordered" %></label>
+    <label class="form-control"><span class="label-text">Kelas</span><%= f.text_field :class_name, class: "input input-bordered", placeholder: "1A" %></label>
+    <label class="form-control"><span class="label-text">Nama Wali</span><%= f.text_field :guardian_name, class: "input input-bordered" %></label>
+    <label class="form-control"><span class="label-text">No WA</span><%= f.text_field :phone, class: "input input-bordered" %></label>
+    <label class="form-control sm:col-span-2"><span class="label-text">Alamat</span><%= f.text_field :address, class: "input input-bordered" %></label>
+    <label class="form-control"><span class="label-text">Status</span><%= f.select :active, [["Aktif", true], ["Nonaktif", false]], {}, class: "select select-bordered" %></label>
+  </div>
+  <div class="flex gap-2">
+    <button type="submit" class="btn btn-primary gap-2"><i class="fa-solid fa-check"></i> Simpan</button>
+    <a href="/students" class="btn btn-ghost">Batal</a>
+  </div>
+<% end %>

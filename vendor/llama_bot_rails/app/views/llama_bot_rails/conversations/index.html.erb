@@ -1,0 +1,150 @@
+<% content_for :title, "Messages - LlamaBotRails" %>
+
+<%# No page heading here: the Inbox tab bar above already says "Messages", and a
+    second 4xl title plus a tagline just pushed the threads below the fold. The
+    threads are the page, so they start at the top. Cross-links to Feedback and
+    Notifications are gone for the same reason — the tab bar is the navigation. %>
+<div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+  <div class="max-w-4xl mx-auto">
+    <!-- Search + New Chat, one row above the threads -->
+    <div class="mb-4 flex items-center gap-3">
+      <div class="relative flex-1">
+        <i class="fas fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+        <input
+          type="search"
+          id="conversation-search"
+          class="input input-bordered w-full pl-9 bg-white"
+          placeholder="Search conversations..."
+          autocomplete="off"
+          aria-label="Search conversations"
+        >
+      </div>
+
+      <%# Opens the recipient picker. It used to be a permanently expanded panel
+          taking the top third of the page for something you do rarely. %>
+      <button type="button" class="btn btn-primary" onclick="openNewChat()">
+        <i class="fas fa-plus"></i> New Chat
+      </button>
+    </div>
+
+    <!-- Conversations List -->
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+      <% if @conversations.any? %>
+        <% @conversations.each do |conversation| %>
+          <% unread = conversation.unread_count_for(current_llama_user.id) %>
+          <% preview = conversation.last_message&.body.to_s %>
+          <%= link_to conversation_path(conversation),
+                class: "conversation-row block px-6 py-4 border-b border-gray-100 hover:bg-gray-50 transition-colors #{unread > 0 ? 'bg-purple-50' : ''}",
+                data: { search: "#{conversation.display_name_for(current_llama_user.id)} #{preview}".downcase } do %>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                  <i class="fas fa-user text-purple-600"></i>
+                </div>
+                <div>
+                  <h3 class="font-semibold text-gray-800 <%= unread > 0 ? 'font-bold' : '' %>">
+                    <%= conversation.display_name_for(current_llama_user.id) %>
+                  </h3>
+                  <% if conversation.last_message %>
+                    <p class="text-sm text-gray-500 truncate max-w-md">
+                      <%= truncate(preview, length: 60) %>
+                    </p>
+                  <% else %>
+                    <p class="text-sm text-gray-400 italic">No messages yet</p>
+                  <% end %>
+                </div>
+              </div>
+              <div class="flex items-center gap-3">
+                <% if unread > 0 %>
+                  <span class="px-2 py-1 bg-purple-600 text-white text-xs font-bold rounded-full">
+                    <%= unread %>
+                  </span>
+                <% end %>
+                <span class="text-xs text-gray-400">
+                  <%= time_ago_in_words(conversation.updated_at) %> ago
+                </span>
+                <i class="fas fa-chevron-right text-gray-400"></i>
+              </div>
+            </div>
+          <% end %>
+        <% end %>
+
+        <%# Shown only when a search matches nothing, so the list never looks
+            simply empty when it is actually filtered. %>
+        <div id="conversation-search-empty" class="hidden p-12 text-center">
+          <i class="fas fa-magnifying-glass text-4xl text-gray-300 mb-4"></i>
+          <p class="text-gray-500">No conversations match your search</p>
+        </div>
+      <% else %>
+        <div class="p-12 text-center">
+          <i class="fas fa-inbox text-4xl text-gray-300 mb-4"></i>
+          <p class="text-gray-500">No conversations yet</p>
+          <p class="text-sm text-gray-400 mt-2">Start one with the <span class="font-semibold">+ New Chat</span> button above</p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<!-- New Chat picker -->
+<dialog id="new-chat-dialog" class="modal">
+  <div class="modal-box max-w-md">
+    <h3 class="text-lg font-semibold text-gray-700 mb-4">New Chat</h3>
+    <%= form_with url: conversations_path, method: :post, class: "flex flex-col gap-3" do |f| %>
+      <select name="recipient_id" class="select select-bordered w-full" required>
+        <option value="" disabled selected>Select a user...</option>
+        <% @users.each do |user| %>
+          <option value="<%= user.id %>"><%= user.email %></option>
+        <% end %>
+      </select>
+      <div class="flex justify-end gap-2">
+        <button type="button" class="btn btn-ghost" onclick="closeNewChat()">Cancel</button>
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-plus mr-1"></i> Start Chat
+        </button>
+      </div>
+    <% end %>
+  </div>
+  <%# Clicking the backdrop closes the dialog (daisyUI's modal-backdrop form). %>
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>
+
+<script>
+  function openNewChat() {
+    const dialog = document.getElementById('new-chat-dialog');
+    // showModal is what makes Escape and the backdrop close it; the fallback
+    // keeps the picker usable if a browser lacks <dialog> support.
+    if (dialog.showModal) { dialog.showModal(); } else { dialog.setAttribute('open', 'open'); }
+  }
+
+  function closeNewChat() {
+    const dialog = document.getElementById('new-chat-dialog');
+    if (dialog.close) { dialog.close(); } else { dialog.removeAttribute('open'); }
+  }
+
+  // Filtering happens in the page rather than on the server: the index already
+  // renders every conversation this user has, so a round trip would only add
+  // latency to what is really a find-as-you-type over a short list.
+  (function () {
+    const input = document.getElementById('conversation-search');
+    if (!input) return;
+
+    const rows = Array.from(document.querySelectorAll('.conversation-row'));
+    const empty = document.getElementById('conversation-search-empty');
+
+    input.addEventListener('input', function () {
+      const query = input.value.trim().toLowerCase();
+      let visible = 0;
+
+      rows.forEach(function (row) {
+        const match = !query || (row.dataset.search || '').includes(query);
+        row.classList.toggle('hidden', !match);
+        if (match) visible++;
+      });
+
+      if (empty) empty.classList.toggle('hidden', visible > 0);
+    });
+  })();
+</script>

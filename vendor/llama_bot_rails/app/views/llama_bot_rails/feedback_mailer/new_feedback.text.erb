@@ -1,0 +1,10 @@
+New feedback submitted
+
+<%= @feedback.title.presence || "(no title)" %>
+<% if @feedback.feedback_type.present? %>Type: <%= @feedback.feedback_type %>
+<% end %>From: <%= @feedback.display_author %>
+
+<%= @feedback.description %>
+<% if @url %>
+View it: <%= @url %>
+<% end %>

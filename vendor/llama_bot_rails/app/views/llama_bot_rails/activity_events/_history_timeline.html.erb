@@ -1,0 +1,47 @@
+<%#
+  Record-level History, embeddable in HOST app views via the
+  llama_activity_history(record) helper.
+
+  Deliberately plain Tailwind utilities only — host layouts do not load
+  DaisyUI, and this has to look right inside whatever page includes it.
+  (Do not put an ERB closing tag inside this comment: it would terminate the
+  comment early and dump the remainder onto the page.)
+%>
+<div class="llama-activity-history">
+  <% if events.empty? %>
+    <p class="text-sm text-gray-500 py-4">No recorded history for this record yet.</p>
+  <% else %>
+    <ol class="border-l border-gray-200 ml-2">
+      <% events.each do |event| %>
+        <li class="relative pl-6 pb-6">
+          <span class="absolute -left-1.5 top-1 w-3 h-3 rounded-full <%= event.human ? 'bg-purple-500' : 'bg-gray-300' %>"></span>
+
+          <div class="text-xs text-gray-400">
+            <%= llama_activity_in_zone(event.occurred_at).strftime("%B %-d — %-l:%M %p") %>
+          </div>
+
+          <div class="font-medium text-gray-900 mt-1">
+            <%= llama_activity_sentence(event) %>
+          </div>
+
+          <% if (cause = llama_activity_cause(event)) %>
+            <div class="text-sm text-gray-500 mt-1">
+              Triggered by <span class="font-mono"><%= cause %></span>
+            </div>
+          <% end %>
+
+          <% (versions_by_event[event.id] || []).each do |version| %>
+            <div class="mt-2 text-sm">
+              <%= render "llama_bot_rails/activity_events/changes", version: version %>
+            </div>
+          <% end %>
+        </li>
+      <% end %>
+    </ol>
+
+    <%# Host pages have no other clue what zone these are in — say it. %>
+    <p class="text-xs text-gray-400 mt-1">
+      Times shown in <%= llama_activity_zone_label %>.
+    </p>
+  <% end %>
+</div>

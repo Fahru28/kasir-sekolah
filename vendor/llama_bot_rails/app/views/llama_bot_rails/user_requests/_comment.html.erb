@@ -1,0 +1,75 @@
+<div class="bg-gray-50 rounded-lg p-4 <%= comment.is_admin_response ? 'border-l-4 border-blue-500' : '' %>" id="comment-<%= comment.id %>">
+  <div class="flex items-start justify-between mb-2">
+    <div>
+      <span class="font-semibold text-gray-800"><%= comment.display_author %></span>
+      <% if comment.is_admin_response %>
+        <span class="badge badge-sm badge-primary ml-2">Staff</span>
+      <% end %>
+      <span class="text-xs text-gray-500 ml-2"><%= time_ago_in_words(comment.created_at) %> ago</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <% if current_llama_user %>
+        <button type="button" class="btn btn-ghost btn-xs" onclick="toggleReplyForm(<%= comment.id %>)">
+          <i class="fas fa-reply"></i> Reply
+        </button>
+      <% end %>
+      <% if can?(:moderate_feedback) || comment.user_id == current_llama_user&.id %>
+        <%= button_to user_request_comment_path(request, comment), method: :delete, class: "btn btn-ghost btn-xs text-red-500", data: { turbo_confirm: "Delete this comment?" } do %>
+          <i class="fas fa-trash"></i>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+  <p class="text-gray-700 whitespace-pre-wrap"><%= comment.body %></p>
+
+  <!-- Reply Form (hidden by default) -->
+  <% if current_llama_user %>
+    <div id="reply-form-<%= comment.id %>" class="mt-3 hidden">
+      <%= form_with model: LlamaBotRails::FeedbackComment.new, url: user_request_comments_path(request), class: "flex gap-2" do |f| %>
+        <%= f.hidden_field :parent_id, value: comment.id %>
+        <div class="flex-1">
+          <%= f.text_area :body, placeholder: "Write a reply...", class: "textarea textarea-bordered textarea-sm w-full", rows: 2 %>
+        </div>
+        <div class="flex flex-col gap-1">
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="fas fa-paper-plane"></i>
+          </button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="toggleReplyForm(<%= comment.id %>)">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+
+  <!-- Nested Replies -->
+  <% if comment.replies.any? && depth < 3 %>
+    <div class="mt-4 ml-4 pl-4 border-l-2 border-gray-200 space-y-3">
+      <% comment.replies.chronological.each do |reply| %>
+        <%= render partial: 'llama_bot_rails/user_requests/comment', locals: { comment: reply, request: request, depth: depth + 1 } %>
+      <% end %>
+    </div>
+  <% elsif comment.replies.any? %>
+    <div class="mt-4 ml-4 pl-4 border-l-2 border-gray-200 space-y-3">
+      <% comment.replies.chronological.each do |reply| %>
+        <div class="bg-gray-100 rounded-lg p-3 <%= reply.is_admin_response ? 'border-l-4 border-blue-500' : '' %>">
+          <div class="flex items-start justify-between mb-1">
+            <div>
+              <span class="font-semibold text-gray-800 text-sm"><%= reply.display_author %></span>
+              <% if reply.is_admin_response %>
+                <span class="badge badge-xs badge-primary ml-1">Staff</span>
+              <% end %>
+              <span class="text-xs text-gray-500 ml-2"><%= time_ago_in_words(reply.created_at) %> ago</span>
+            </div>
+            <% if can?(:moderate_feedback) || reply.user_id == current_llama_user&.id %>
+              <%= button_to user_request_comment_path(request, reply), method: :delete, class: "btn btn-ghost btn-xs text-red-500", data: { turbo_confirm: "Delete this reply?" } do %>
+                <i class="fas fa-trash"></i>
+              <% end %>
+            <% end %>
+          </div>
+          <p class="text-gray-700 text-sm whitespace-pre-wrap"><%= reply.body %></p>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+</div>

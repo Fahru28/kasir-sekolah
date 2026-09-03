@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html data-theme="light">
+<head>
+  <title><%= request.host %> | History</title>
+  <%= render "head" %>
+</head>
+<body class="bg-base-200 min-h-screen">
+  <div class="max-w-3xl mx-auto px-4 py-8">
+    <%= link_to activity_path, class: "btn btn-ghost btn-sm mb-4" do %>
+      <i class="fas fa-arrow-left mr-1"></i> Activity
+    <% end %>
+
+    <div class="mb-6">
+      <h1 class="text-3xl font-bold">
+        <%= @subject_type.demodulize.titleize %>
+        <%= @subject_label.presence || "##{@subject_id}" %>
+      </h1>
+      <p class="text-sm text-gray-500 mt-1">Everything that has happened to this record</p>
+    </div>
+
+    <%= render "time_zone_note" %>
+
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body">
+        <%= render "history_timeline",
+              events: @events, record: nil, versions_by_event: @versions_by_event %>
+      </div>
+    </div>
+
+    <% if @pagy.pages > 1 %>
+      <div class="flex items-center justify-between text-sm text-gray-500 mt-4">
+        <span><%= pluralize(@pagy.count, "event") %></span>
+        <div class="join">
+          <% if @pagy.prev %>
+            <%= link_to "Prev", url_for(request.query_parameters.merge(page: @pagy.prev)), class: "join-item btn btn-sm" %>
+          <% end %>
+          <span class="join-item btn btn-sm btn-disabled">Page <%= @pagy.page %> of <%= @pagy.pages %></span>
+          <% if @pagy.next %>
+            <%= link_to "Next", url_for(request.query_parameters.merge(page: @pagy.next)), class: "join-item btn btn-sm" %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</body>
+</html>

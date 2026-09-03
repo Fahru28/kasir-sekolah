@@ -1,0 +1,7 @@
+<%# Every clock on these screens is rendered in one zone — Pacific unless the
+    host app sets its own config.time_zone. Name it, so nobody has to guess
+    which offset they are reading. See LlamaBotRails.display_time_zone. %>
+<p class="text-xs text-gray-400 <%= local_assigns.fetch(:spacing, "mb-6") %>">
+  <i class="fas fa-clock mr-1"></i>
+  All times shown in <span class="font-medium"><%= llama_activity_zone_label %></span>.
+</p>

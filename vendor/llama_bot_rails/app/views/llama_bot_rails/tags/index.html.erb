@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html data-theme="light">
+<head>
+  <title>Manage Tags - LlamaBotRails</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <%= csrf_meta_tags %>
+</head>
+<body>
+  <div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+      <!-- Header -->
+      <div class="mb-8 flex items-center justify-between">
+        <div>
+          <h1 class="text-4xl font-bold text-gray-800 flex items-center gap-3">
+            <i class="fas fa-tags text-indigo-600"></i>
+            Manage Tags
+          </h1>
+          <p class="text-gray-600 mt-2">Create and manage tags for organizing feedback and requests</p>
+        </div>
+        <%= link_to new_tag_path, class: "btn btn-primary" do %>
+          <i class="fas fa-plus"></i> New Tag
+        <% end %>
+      </div>
+
+      <!-- Navigation -->
+      <div class="mb-6 flex gap-2">
+        <%= link_to dashboard_user_feedbacks_path, class: "btn btn-outline btn-sm" do %>
+          <i class="fas fa-comments"></i> Feedback Dashboard
+        <% end %>
+        <%= link_to dashboard_user_requests_path, class: "btn btn-outline btn-sm" do %>
+          <i class="fas fa-lightbulb"></i> Requests Dashboard
+        <% end %>
+      </div>
+
+      <!-- Tags Grid -->
+      <div class="bg-white rounded-lg shadow-sm p-6">
+        <% if @tags.any? %>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <% @tags.each do |tag| %>
+              <div class="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div class="flex items-start justify-between mb-3">
+                  <span class="badge badge-lg" style="<%= tag_style(tag) %>">
+                    <%= tag.name %>
+                  </span>
+                  <div class="flex gap-1">
+                    <%= link_to edit_tag_path(tag), class: "btn btn-ghost btn-xs" do %>
+                      <i class="fas fa-edit"></i>
+                    <% end %>
+                    <%= button_to tag_path(tag), method: :delete, class: "btn btn-ghost btn-xs text-red-500", data: { turbo_confirm: "Delete this tag? It will be removed from all items." } do %>
+                      <i class="fas fa-trash"></i>
+                    <% end %>
+                  </div>
+                </div>
+
+                <% if tag.description.present? %>
+                  <p class="text-sm text-gray-600 mb-3 line-clamp-2"><%= tag.description %></p>
+                <% end %>
+
+                <div class="flex items-center justify-between text-xs text-gray-500">
+                  <span>
+                    <i class="fas fa-link mr-1"></i>
+                    <%= tag.usage_count %> item(s)
+                  </span>
+                  <span>
+                    <i class="fas fa-palette mr-1"></i>
+                    <%= tag.color %>
+                  </span>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        <% else %>
+          <div class="text-center py-12">
+            <i class="fas fa-tags text-4xl text-gray-300 mb-4"></i>
+            <p class="text-gray-500 mb-4">No tags yet</p>
+            <%= link_to new_tag_path, class: "btn btn-primary btn-sm" do %>
+              <i class="fas fa-plus"></i> Create First Tag
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

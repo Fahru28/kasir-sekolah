@@ -1,0 +1,38 @@
+<% content_for :header, "Install" %>
+
+<div class="max-w-2xl mx-auto px-4">
+  <div class="text-center mb-6">
+    <div class="w-16 h-16 rounded-2xl bg-emerald-700 flex items-center justify-center text-white font-black mx-auto">SIT</div>
+    <h2 class="text-2xl font-black mt-3">SIT INSANTAMA RANGKASBITUNG</h2>
+    <p class="text-sm opacity-60">Unit Layanan Pendidikan — Aplikasi Kasir Sekolah</p>
+  </div>
+
+  <div class="card bg-base-100 shadow border border-base-200">
+    <div class="card-body">
+      <h3 class="font-bold flex items-center gap-2"><i class="fa-solid fa-mobile-screen text-primary"></i> Pasang di HP (seperti aplikasi)</h3>
+      <p class="text-sm opacity-70 mt-1">Buka link app di HP → Tambah ke Layar Utama. Nanti ikon SIT muncul di HP, buka langsung tanpa ketik alamat lagi.</p>
+      <div class="mt-4">
+        <%= render "shared/install_app" %>
+      </div>
+      <div class="divider my-3"></div>
+      <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+        <p class="font-bold text-sm flex items-center gap-2"><i class="fa-solid fa-key text-amber-600"></i> Login Petugas (sudah aktif)</p>
+        <p class="text-xs opacity-70 mt-1">App sekarang terkunci — cuma petugas yang sudah login yang bisa buka Kasir/Laporan/Piutang.</p>
+        <div class="mt-2 font-mono text-sm bg-white rounded-lg p-3 border">
+          <div>Email: <b>admin@sitin.s.sch.id</b></div>
+          <div>Password: <b>insantama123</b></div>
+        </div>
+        <p class="text-xs opacity-60 mt-2">Ganti password: setelah login, klik profil → ubah password. Bagikan akun ini ke petugas koperasi.</p>
+        <a href="/users/sign_in" class="btn btn-primary btn-sm mt-3 gap-1"><i class="fa-solid fa-right-to-bracket"></i> Buka Halaman Login</a>
+      </div>
+      <div class="mt-3">
+        <p class="text-xs font-bold opacity-70">Cara share ke guru lain:</p>
+        <ol class="text-xs opacity-70 list-decimal list-inside space-y-1 mt-1">
+          <li>Copy alamat link di browser kamu sekarang (misal <span class="font-mono">…llamapress.ai</span>)</li>
+          <li>Kirim via WA ke petugas</li>
+          <li>Mereka buka link → login pakai akun di atas → langsung pakai</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>

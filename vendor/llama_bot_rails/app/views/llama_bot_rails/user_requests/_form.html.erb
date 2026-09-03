@@ -1,0 +1,108 @@
+<%= form_with model: request, url: request.persisted? ? user_request_path(request) : user_requests_path, class: "space-y-6" do |f| %>
+  <% if request.errors.any? %>
+    <div class="alert alert-error">
+      <i class="fas fa-exclamation-circle"></i>
+      <div>
+        <h3 class="font-bold">Please fix the following errors:</h3>
+        <ul class="list-disc list-inside">
+          <% request.errors.full_messages.each do |message| %>
+            <li><%= message %></li>
+          <% end %>
+        </ul>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Title -->
+  <div class="form-control">
+    <%= f.label :title, class: "label" do %>
+      <span class="label-text font-semibold">Title <span class="text-red-500">*</span></span>
+    <% end %>
+    <%= f.text_field :title, class: "input input-bordered w-full", placeholder: "Brief summary of your request" %>
+  </div>
+
+  <!-- Request Type -->
+  <div class="form-control">
+    <%= f.label :request_type, class: "label" do %>
+      <span class="label-text font-semibold">Type <span class="text-red-500">*</span></span>
+    <% end %>
+    <%= f.select :request_type, LlamaBotRails::UserRequest::REQUEST_TYPES.map { |t| [t.humanize, t] }, {}, class: "select select-bordered w-full" %>
+  </div>
+
+  <!-- Description -->
+  <div class="form-control">
+    <%= f.label :description, class: "label" do %>
+      <span class="label-text font-semibold">Description <span class="text-red-500">*</span></span>
+    <% end %>
+    <%= f.text_area :description, class: "textarea textarea-bordered w-full h-32", placeholder: "Please describe your request in detail..." %>
+  </div>
+
+  <!-- Attachments -->
+  <div class="form-control">
+    <%= f.label :attachments, class: "label" do %>
+      <span class="label-text font-semibold">Attachments</span>
+    <% end %>
+
+    <% if request.persisted? && request.attachments.attached? %>
+      <div class="mb-4 space-y-2">
+        <p class="text-sm text-gray-600 font-medium">Current attachments:</p>
+        <% request.attachments.each do |attachment| %>
+          <div class="flex items-center gap-2 p-2 bg-gray-50 rounded">
+            <!-- Hidden field to preserve this attachment -->
+            <%= hidden_field_tag "user_request[attachments][]", attachment.signed_id %>
+            <i class="fas fa-paperclip text-gray-400"></i>
+            <span class="text-sm flex-1"><%= attachment.filename %></span>
+            <span class="text-xs text-gray-400"><%= number_to_human_size(attachment.byte_size) %></span>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-yellow-400 transition-colors">
+      <%= f.file_field :attachments, multiple: true, class: "file-input file-input-bordered w-full", accept: "*/*" %>
+      <p class="text-sm text-gray-500 mt-2">Upload mockups, screenshots, or any other supporting files</p>
+    </div>
+  </div>
+
+  <% if can?(:moderate_feedback) %>
+    <div class="divider">Admin Options</div>
+
+    <!-- Status (Admin only) -->
+    <div class="form-control">
+      <%= f.label :status, class: "label" do %>
+        <span class="label-text font-semibold">Status</span>
+      <% end %>
+      <%= f.select :status, LlamaBotRails::UserRequest::STATUSES.map { |s| [s.humanize, s] }, {}, class: "select select-bordered w-full" %>
+    </div>
+
+    <!-- Priority (Admin only) -->
+    <div class="form-control">
+      <%= f.label :priority, class: "label" do %>
+        <span class="label-text font-semibold">Priority</span>
+      <% end %>
+      <%= f.select :priority, [['Low', 0], ['Medium', 1], ['High', 2], ['Critical', 3]], {}, class: "select select-bordered w-full" %>
+    </div>
+
+    <!-- Admin Notes (Admin only) -->
+    <div class="form-control">
+      <%= f.label :admin_notes, class: "label" do %>
+        <span class="label-text font-semibold">Admin Notes</span>
+      <% end %>
+      <%= f.text_area :admin_notes, class: "textarea textarea-bordered w-full h-24", placeholder: "Internal notes (not visible to user)" %>
+    </div>
+
+    <!-- Response (Admin only) -->
+    <div class="form-control">
+      <%= f.label :response, class: "label" do %>
+        <span class="label-text font-semibold">Response</span>
+      <% end %>
+      <%= f.text_area :response, class: "textarea textarea-bordered w-full h-24", placeholder: "Official response to this request" %>
+    </div>
+  <% end %>
+
+  <!-- Submit Button -->
+  <div class="flex justify-end gap-3 pt-4">
+    <%= link_to "Cancel", request.persisted? ? user_request_path(request) : user_requests_path, class: "btn btn-ghost" %>
+    <%= f.submit request.persisted? ? "Update Request" : "Submit Request", class: "btn btn-primary" %>
+  </div>
+<% end %>

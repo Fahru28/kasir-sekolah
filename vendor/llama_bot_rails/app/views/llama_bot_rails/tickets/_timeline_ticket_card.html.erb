@@ -1,0 +1,81 @@
+<%
+  status_border = case ticket.status
+                  when 'backlog' then 'border-gray-500'
+                  when 'assigned' then 'border-blue-500'
+                  when 'in_progress' then 'border-amber-500'
+                  when 'review' then 'border-purple-500'
+                  when 'incomplete' then 'border-red-500'
+                  when 'done' then 'border-green-500'
+                  else 'border-gray-500'
+                  end
+
+  status_bg = case ticket.status
+              when 'backlog' then 'bg-gray-50'
+              when 'assigned' then 'bg-blue-50'
+              when 'in_progress' then 'bg-amber-50'
+              when 'review' then 'bg-purple-50'
+              when 'incomplete' then 'bg-red-50'
+              when 'done' then 'bg-green-50'
+              else 'bg-gray-50'
+              end
+
+  status_badge = case ticket.status
+                 when 'backlog' then 'badge-ghost'
+                 when 'assigned' then 'badge-info'
+                 when 'in_progress' then 'badge-warning'
+                 when 'review' then 'badge-secondary'
+                 when 'incomplete' then 'badge-error'
+                 when 'done' then 'badge-success'
+                 else 'badge-ghost'
+                 end
+%>
+<div
+  class="timeline-ticket absolute bg-white rounded-lg p-3 shadow-sm border-l-4 <%= status_border %> <%= status_bg %> cursor-pointer hover:shadow-lg"
+  style="width: 220px;"
+  data-ticket-id="<%= ticket.id %>"
+  data-created-at="<%= ticket.created_at.iso8601 %>"
+  data-status="<%= ticket.status %>"
+  data-ticket-title="<%= escape_javascript(ticket.title) %>"
+  data-ticket-description="<%= escape_javascript(ticket.description.to_s) %>"
+  onclick="openEditModal(<%= ticket.id %>)"
+>
+  <div class="flex items-start justify-between mb-1">
+    <span class="badge badge-xs <%= status_badge %>">
+      <%= ticket.status.humanize %>
+    </span>
+    <span class="text-xs text-gray-400">
+      <%= ticket.created_at.strftime('%H:%M') %>
+    </span>
+  </div>
+
+  <div class="flex items-start gap-1 mb-1">
+    <h4 class="font-semibold text-gray-800 text-sm line-clamp-2 flex-1" title="<%= ticket.title %>">
+      <%= ticket.title %>
+    </h4>
+    <button
+      type="button"
+      onclick="copyTitleToClipboard(this); event.stopPropagation();"
+      class="btn btn-ghost btn-xs px-1 copy-title-btn shrink-0"
+      title="Copy title"
+    >
+      <i class="fas fa-copy text-gray-400 text-xs"></i>
+    </button>
+  </div>
+
+  <div class="text-xs text-gray-500">
+    <%= ticket.created_at.strftime('%b %d, %Y') %>
+  </div>
+
+  <% if ticket.project.present? %>
+    <div class="mt-1">
+      <span class="badge badge-xs badge-primary">
+        <i class="fas fa-folder text-[8px] mr-1"></i>
+        <%= ticket.project.name %>
+      </span>
+    </div>
+  <% end %>
+
+  <% if ticket.description.present? %>
+    <p class="text-xs text-gray-500 line-clamp-1 mt-1"><%= ticket.description %></p>
+  <% end %>
+</div>

@@ -1,0 +1,21 @@
+<% content_for :title, "Edit Request - LlamaBotRails" %>
+
+  <div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8">
+    <div class="max-w-2xl mx-auto">
+      <!-- Back Link -->
+      <div class="mb-6">
+        <%= link_to user_request_path(@request), class: "btn btn-ghost btn-sm" do %>
+          <i class="fas fa-arrow-left"></i> Back to Request
+        <% end %>
+      </div>
+
+      <!-- Form Card -->
+      <div class="bg-white rounded-lg shadow-sm p-8">
+        <h1 class="text-2xl font-bold text-gray-800 mb-6">
+          <i class="fas fa-edit mr-2 text-yellow-500"></i>Edit Request
+        </h1>
+
+        <%= render 'form', request: @request %>
+      </div>
+    </div>
+  </div>

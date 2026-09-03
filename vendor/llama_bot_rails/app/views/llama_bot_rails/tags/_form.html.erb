@@ -1,0 +1,83 @@
+<%= form_with model: tag, url: tag.persisted? ? tag_path(tag) : tags_path, class: "space-y-6" do |f| %>
+  <% if tag.errors.any? %>
+    <div class="alert alert-error">
+      <i class="fas fa-exclamation-circle"></i>
+      <div>
+        <h3 class="font-bold">Please fix the following errors:</h3>
+        <ul class="list-disc list-inside">
+          <% tag.errors.full_messages.each do |message| %>
+            <li><%= message %></li>
+          <% end %>
+        </ul>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Name -->
+  <div class="form-control">
+    <%= f.label :name, class: "label" do %>
+      <span class="label-text font-semibold">Name <span class="text-red-500">*</span></span>
+    <% end %>
+    <%= f.text_field :name, class: "input input-bordered w-full", placeholder: "e.g., bug, feature, ui" %>
+  </div>
+
+  <!-- Color -->
+  <div class="form-control">
+    <%= f.label :color, class: "label" do %>
+      <span class="label-text font-semibold">Color</span>
+    <% end %>
+    <div class="flex items-center gap-4">
+      <%= f.color_field :color, class: "w-16 h-12 rounded cursor-pointer border border-gray-300" %>
+      <%= f.text_field :color, class: "input input-bordered flex-1", placeholder: "#6366f1" %>
+    </div>
+    <p class="text-xs text-gray-500 mt-1">Choose a color for the tag badge</p>
+  </div>
+
+  <!-- Preview -->
+  <div class="form-control">
+    <span class="label-text font-semibold mb-2">Preview</span>
+    <div class="p-4 bg-gray-50 rounded-lg">
+      <span id="tag-preview" class="badge badge-lg" style="background-color: <%= tag.color || '#6366f1' %>; color: white;">
+        <%= tag.name.presence || 'Tag Name' %>
+      </span>
+    </div>
+  </div>
+
+  <!-- Description -->
+  <div class="form-control">
+    <%= f.label :description, class: "label" do %>
+      <span class="label-text font-semibold">Description</span>
+    <% end %>
+    <%= f.text_area :description, class: "textarea textarea-bordered w-full h-20", placeholder: "Optional description for this tag" %>
+  </div>
+
+  <!-- Submit Button -->
+  <div class="flex justify-end gap-3 pt-4">
+    <%= link_to "Cancel", tags_path, class: "btn btn-ghost" %>
+    <%= f.submit tag.persisted? ? "Update Tag" : "Create Tag", class: "btn btn-primary" %>
+  </div>
+<% end %>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const nameInput = document.querySelector('input[name="tag[name]"]');
+    const colorInput = document.querySelector('input[name="tag[color]"]');
+    const colorPicker = document.querySelector('input[type="color"]');
+    const preview = document.getElementById('tag-preview');
+
+    function updatePreview() {
+      preview.textContent = nameInput.value || 'Tag Name';
+      preview.style.backgroundColor = colorInput.value || '#6366f1';
+    }
+
+    nameInput.addEventListener('input', updatePreview);
+    colorInput.addEventListener('input', function() {
+      colorPicker.value = this.value;
+      updatePreview();
+    });
+    colorPicker.addEventListener('input', function() {
+      colorInput.value = this.value;
+      updatePreview();
+    });
+  });
+</script>

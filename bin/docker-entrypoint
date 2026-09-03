@@ -1,0 +1,51 @@
+#!/bin/bash -e
+
+# Enable jemalloc for reduced memory usage and latency.
+if [ -z "${LD_PRELOAD+x}" ] && [ -f /usr/lib/*/libjemalloc.so.2 ]; then
+  export LD_PRELOAD="$(echo /usr/lib/*/libjemalloc.so.2)"
+fi
+
+# The server (and anything run via `docker exec`) runs as root, but customer test
+# runs and editors run as uid 1000. A uid-1000 process cannot overwrite a
+# root-owned 644 file even in a 777 directory, which broke customer test runs on
+# root-created bootsnap/sprockets cache files (SI#134, SI#154).
+#
+# Default POSIX ACLs fix this at the kernel level: the d: (default) entry is
+# inherited by every file created afterwards, so everything root creates is born
+# uid-1000-writable. The -R pass also repairs files that already exist (e.g.
+# after a container recreate wiped /rails/tmp back to the image layer).
+# Ownership is unchanged — files stay root-owned with an extra ACL entry.
+#
+# Best-effort: never block boot if the filesystem lacks ACL support.
+#
+# Split into two passes because a single `setfacl -R /rails` walks node_modules
+# (tens of thousands of files, one syscall each) and stalled boot ~2 minutes on
+# real boxes — the reverse proxy 502s until Puma binds. The incident paths are
+# small trees, so fix them synchronously; the rest of the tree is repaired in the
+# background behind the booted server. Files created AFTER a dir has its default
+# (d:) ACL inherit it at creation, so the background pass only matters for files
+# that predate the ACL. See docs/dev/root-owned-tmp-cache-rca.md.
+mkdir -p /rails/coverage || true
+ACL_ENTRIES="-m u:1000:rwX -m d:u:1000:rwX"
+if setfacl $ACL_ENTRIES /rails 2>/dev/null; then
+  # Fast blocking pass: the paths customer test runs hit (SI#134/SI#154).
+  # /rails/storage is a docker named volume, created root:root 775 — "other" gets r-x,
+  # so the agent (uid 1000) hits EACCES, decides the app cannot write there and moves
+  # ActiveStorage to tmp/, which an image bump deletes. Seven boxes, 481 attachments
+  # (SI#327). The d: entry is the load-bearing half: Puma creates new sharded blob
+  # subdirectories as root at runtime, so a one-off chown decays but an inherited ACL
+  # does not. Kept in the BLOCKING pass — the agent can look the moment boot finishes.
+  setfacl -R $ACL_ENTRIES /rails/tmp /rails/log /rails/coverage /rails/storage \
+    /rails/db /rails/app /rails/config /rails/spec /rails/lib /rails/public 2>/dev/null || true
+  # Slow full-tree repair (node_modules etc.) in the background, low priority.
+  ( nice -n 19 setfacl -R $ACL_ENTRIES /rails 2>/dev/null || true ) &
+else
+  echo "WARNING: setfacl failed — uid-1000 writes to root-created files may hit EACCES"
+fi
+
+# If running the rails server then create or migrate existing database
+if [ "${1}" == "./bin/rails" ] && [ "${2}" == "server" ]; then
+  ./bin/rails db:prepare
+fi
+
+exec "${@}"

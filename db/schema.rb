@@ -1,0 +1,502 @@
+# This file is auto-generated from the current state of the database. Instead
+# of editing this file, please use the migrations feature of Active Record to
+# incrementally modify your database, and then regenerate this schema definition.
+#
+# This file is the source Rails uses to define your schema when running `bin/rails
+# db:schema:load`. When creating a new database, `bin/rails db:schema:load` tends to
+# be faster and is potentially less error prone than running all of your
+# migrations from scratch. Old migrations may fail to apply correctly if those
+# migrations use external dependencies or application code.
+#
+# It's strongly recommended that you check this file into your version control system.
+
+ActiveRecord::Schema[7.2].define(version: 2026_09_03_040745) do
+  # These are extensions that must be enabled in order to support this database
+  enable_extension "plpgsql"
+
+  create_table "action_text_rich_texts", force: :cascade do |t|
+    t.string "name", null: false
+    t.text "body"
+    t.string "record_type", null: false
+    t.bigint "record_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["record_type", "record_id", "name"], name: "index_action_text_rich_texts_uniqueness", unique: true
+  end
+
+  create_table "active_storage_attachments", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "record_type", null: false
+    t.bigint "record_id", null: false
+    t.bigint "blob_id", null: false
+    t.datetime "created_at", null: false
+    t.index ["blob_id"], name: "index_active_storage_attachments_on_blob_id"
+    t.index ["record_type", "record_id", "name", "blob_id"], name: "index_active_storage_attachments_uniqueness", unique: true
+  end
+
+  create_table "active_storage_blobs", force: :cascade do |t|
+    t.string "key", null: false
+    t.string "filename", null: false
+    t.string "content_type"
+    t.text "metadata"
+    t.string "service_name", null: false
+    t.bigint "byte_size", null: false
+    t.string "checksum"
+    t.datetime "created_at", null: false
+    t.index ["key"], name: "index_active_storage_blobs_on_key", unique: true
+  end
+
+  create_table "active_storage_variant_records", force: :cascade do |t|
+    t.bigint "blob_id", null: false
+    t.string "variation_digest", null: false
+    t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "checkpoint_blobs", primary_key: ["thread_id", "checkpoint_ns", "channel", "version"], force: :cascade do |t|
+    t.text "thread_id", null: false
+    t.text "checkpoint_ns", default: "", null: false
+    t.text "channel", null: false
+    t.text "version", null: false
+    t.text "type", null: false
+    t.binary "blob"
+    t.index ["thread_id"], name: "checkpoint_blobs_thread_id_idx"
+  end
+
+  create_table "checkpoint_migrations", primary_key: "v", id: :integer, default: nil, force: :cascade do |t|
+  end
+
+  create_table "checkpoint_writes", primary_key: ["thread_id", "checkpoint_ns", "checkpoint_id", "task_id", "idx"], force: :cascade do |t|
+    t.text "thread_id", null: false
+    t.text "checkpoint_ns", default: "", null: false
+    t.text "checkpoint_id", null: false
+    t.text "task_id", null: false
+    t.integer "idx", null: false
+    t.text "channel", null: false
+    t.text "type"
+    t.binary "blob", null: false
+    t.text "task_path", default: "", null: false
+    t.index ["thread_id"], name: "checkpoint_writes_thread_id_idx"
+  end
+
+  create_table "checkpoints", primary_key: ["thread_id", "checkpoint_ns", "checkpoint_id"], force: :cascade do |t|
+    t.text "thread_id", null: false
+    t.text "checkpoint_ns", default: "", null: false
+    t.text "checkpoint_id", null: false
+    t.text "parent_checkpoint_id"
+    t.text "type"
+    t.jsonb "checkpoint", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.index ["thread_id"], name: "checkpoints_thread_id_idx"
+  end
+
+  create_table "debt_payments", force: :cascade do |t|
+    t.bigint "sale_id", null: false
+    t.date "payment_date"
+    t.integer "amount"
+    t.string "note"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["sale_id"], name: "index_debt_payments_on_sale_id"
+  end
+
+  create_table "feedbacks", force: :cascade do |t|
+    t.string "title"
+    t.text "details"
+    t.string "kind"
+    t.string "status"
+    t.string "priority"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "llama_bot_rails_activity_events", force: :cascade do |t|
+    t.string "event_type", null: false
+    t.datetime "occurred_at", null: false
+    t.string "actor_type"
+    t.string "actor_id"
+    t.string "actor_label"
+    t.string "subject_type"
+    t.string "subject_id"
+    t.string "subject_label"
+    t.string "workspace_id"
+    t.string "source", default: "system", null: false
+    t.string "request_id"
+    t.string "correlation_id"
+    t.bigint "parent_event_id"
+    t.string "controller"
+    t.string "action"
+    t.string "job_class"
+    t.string "job_id"
+    t.string "trigger_type"
+    t.string "trigger_name"
+    t.boolean "human", default: false, null: false
+    t.integer "changed_records_count", default: 0, null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.index ["actor_type", "actor_id", "occurred_at"], name: "idx_llama_activity_actor"
+    t.index ["correlation_id"], name: "idx_llama_activity_correlation"
+    t.index ["event_type", "occurred_at"], name: "idx_llama_activity_type"
+    t.index ["human", "workspace_id", "occurred_at"], name: "idx_llama_activity_human"
+    t.index ["parent_event_id"], name: "idx_llama_activity_parent"
+    t.index ["request_id"], name: "idx_llama_activity_request"
+    t.index ["subject_type", "subject_id", "occurred_at"], name: "idx_llama_activity_subject"
+    t.index ["workspace_id", "occurred_at"], name: "idx_llama_activity_workspace"
+  end
+
+  create_table "llama_bot_rails_conversation_participants", force: :cascade do |t|
+    t.bigint "conversation_id", null: false
+    t.integer "user_id", null: false
+    t.datetime "last_read_at"
+    t.boolean "muted", default: false
+    t.datetime "joined_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["conversation_id", "user_id"], name: "idx_conv_participants_unique", unique: true
+    t.index ["conversation_id"], name: "idx_on_conversation_id_2fa0ba1b29"
+    t.index ["last_read_at"], name: "idx_on_last_read_at_4f0fd5067a"
+    t.index ["user_id"], name: "index_llama_bot_rails_conversation_participants_on_user_id"
+  end
+
+  create_table "llama_bot_rails_conversations", force: :cascade do |t|
+    t.string "title"
+    t.string "conversation_type", default: "direct", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["conversation_type"], name: "index_llama_bot_rails_conversations_on_conversation_type"
+    t.index ["updated_at"], name: "index_llama_bot_rails_conversations_on_updated_at"
+  end
+
+  create_table "llama_bot_rails_direct_messages", force: :cascade do |t|
+    t.bigint "conversation_id", null: false
+    t.integer "sender_id", null: false
+    t.text "body", null: false
+    t.datetime "edited_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["conversation_id", "created_at"], name: "idx_dm_conversation_timeline"
+    t.index ["conversation_id"], name: "index_llama_bot_rails_direct_messages_on_conversation_id"
+    t.index ["created_at"], name: "index_llama_bot_rails_direct_messages_on_created_at"
+    t.index ["sender_id"], name: "index_llama_bot_rails_direct_messages_on_sender_id"
+  end
+
+  create_table "llama_bot_rails_feedback_comments", force: :cascade do |t|
+    t.string "commentable_type", null: false
+    t.bigint "commentable_id", null: false
+    t.text "body", null: false
+    t.integer "user_id"
+    t.string "author_name"
+    t.boolean "is_admin_response", default: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "parent_id"
+    t.json "mentioned_user_ids", default: []
+    t.index ["commentable_type", "commentable_id"], name: "index_feedback_comments_on_commentable"
+    t.index ["commentable_type", "commentable_id"], name: "index_llama_bot_rails_feedback_comments_on_commentable"
+    t.index ["parent_id"], name: "index_llama_bot_rails_feedback_comments_on_parent_id"
+    t.index ["user_id"], name: "index_llama_bot_rails_feedback_comments_on_user_id"
+  end
+
+  create_table "llama_bot_rails_notifications", force: :cascade do |t|
+    t.integer "user_id", null: false
+    t.integer "actor_id"
+    t.string "notifiable_type", null: false
+    t.bigint "notifiable_id", null: false
+    t.string "notification_type", null: false
+    t.text "message"
+    t.datetime "read_at"
+    t.json "metadata"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["actor_id"], name: "index_llama_bot_rails_notifications_on_actor_id"
+    t.index ["notifiable_type", "notifiable_id"], name: "idx_notifications_notifiable"
+    t.index ["notifiable_type", "notifiable_id"], name: "index_llama_bot_rails_notifications_on_notifiable"
+    t.index ["notification_type"], name: "index_llama_bot_rails_notifications_on_notification_type"
+    t.index ["read_at"], name: "index_llama_bot_rails_notifications_on_read_at"
+    t.index ["user_id", "read_at"], name: "idx_notifications_user_unread"
+    t.index ["user_id"], name: "index_llama_bot_rails_notifications_on_user_id"
+  end
+
+  create_table "llama_bot_rails_projects", force: :cascade do |t|
+    t.string "name", null: false
+    t.text "description"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["name"], name: "index_llama_bot_rails_projects_on_name"
+  end
+
+  create_table "llama_bot_rails_releases", force: :cascade do |t|
+    t.string "version", null: false
+    t.string "title"
+    t.text "notes"
+    t.boolean "published", default: false, null: false
+    t.datetime "released_at"
+    t.datetime "emailed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["released_at"], name: "index_llama_bot_rails_releases_on_released_at"
+    t.index ["version"], name: "index_llama_bot_rails_releases_on_version", unique: true
+  end
+
+  create_table "llama_bot_rails_shared_links", force: :cascade do |t|
+    t.string "token", null: false
+    t.bigint "attachment_id", null: false
+    t.integer "view_count", default: 0
+    t.datetime "expires_at"
+    t.integer "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["attachment_id"], name: "index_llama_bot_rails_shared_links_on_attachment_id"
+    t.index ["token"], name: "index_llama_bot_rails_shared_links_on_token", unique: true
+  end
+
+  create_table "llama_bot_rails_taggings", force: :cascade do |t|
+    t.bigint "tag_id", null: false
+    t.string "taggable_type", null: false
+    t.bigint "taggable_id", null: false
+    t.integer "tagged_by_user_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tag_id"], name: "index_llama_bot_rails_taggings_on_tag_id"
+    t.index ["taggable_type", "taggable_id", "tag_id"], name: "index_taggings_on_taggable_and_tag", unique: true
+    t.index ["taggable_type", "taggable_id"], name: "index_llama_bot_rails_taggings_on_taggable"
+  end
+
+  create_table "llama_bot_rails_tags", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "color", default: "#6366f1"
+    t.text "description"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["name"], name: "index_llama_bot_rails_tags_on_name", unique: true
+  end
+
+  create_table "llama_bot_rails_ticket_comments", force: :cascade do |t|
+    t.bigint "ticket_id", null: false
+    t.text "body", null: false
+    t.integer "user_id"
+    t.string "author_name"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ticket_id"], name: "index_llama_bot_rails_ticket_comments_on_ticket_id"
+    t.index ["user_id"], name: "index_llama_bot_rails_ticket_comments_on_user_id"
+  end
+
+  create_table "llama_bot_rails_ticket_traces", force: :cascade do |t|
+    t.bigint "ticket_id", null: false
+    t.string "langsmith_url"
+    t.string "langsmith_run_id"
+    t.integer "trace_type", default: 0
+    t.integer "tokens_used"
+    t.string "model"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["langsmith_run_id"], name: "index_llama_bot_rails_ticket_traces_on_langsmith_run_id"
+    t.index ["ticket_id"], name: "index_llama_bot_rails_ticket_traces_on_ticket_id"
+    t.index ["trace_type"], name: "index_llama_bot_rails_ticket_traces_on_trace_type"
+  end
+
+  create_table "llama_bot_rails_tickets", force: :cascade do |t|
+    t.string "title", null: false
+    t.text "description"
+    t.string "status", default: "backlog", null: false
+    t.integer "position"
+    t.text "notes"
+    t.integer "agent_result"
+    t.text "agent_notes"
+    t.string "langsmith_url"
+    t.integer "ticket_type"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.text "research_notes"
+    t.integer "tokens_to_create_ticket"
+    t.integer "tokens_to_implement_ticket"
+    t.string "llm_model"
+    t.datetime "work_started_at"
+    t.datetime "work_completed_at"
+    t.integer "points_estimate"
+    t.decimal "points_actual", precision: 10, scale: 2
+    t.bigint "project_id"
+    t.index ["llm_model"], name: "index_llama_bot_rails_tickets_on_llm_model"
+    t.index ["position"], name: "index_llama_bot_rails_tickets_on_position"
+    t.index ["project_id"], name: "index_llama_bot_rails_tickets_on_project_id"
+    t.index ["status"], name: "index_llama_bot_rails_tickets_on_status"
+    t.index ["work_completed_at"], name: "index_llama_bot_rails_tickets_on_work_completed_at"
+    t.index ["work_started_at"], name: "index_llama_bot_rails_tickets_on_work_started_at"
+  end
+
+  create_table "llama_bot_rails_user_feedbacks", force: :cascade do |t|
+    t.string "title", null: false
+    t.text "description"
+    t.string "feedback_type", default: "general", null: false
+    t.string "status", default: "open", null: false
+    t.integer "priority", default: 0
+    t.integer "user_id"
+    t.string "user_email"
+    t.text "admin_notes"
+    t.string "resolution"
+    t.datetime "resolved_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.text "selected_element_html"
+    t.string "selected_element_selector"
+    t.string "selected_element_url"
+    t.string "submitted_ip"
+    t.index ["created_at"], name: "index_llama_bot_rails_user_feedbacks_on_created_at"
+    t.index ["feedback_type"], name: "index_llama_bot_rails_user_feedbacks_on_feedback_type"
+    t.index ["priority"], name: "index_llama_bot_rails_user_feedbacks_on_priority"
+    t.index ["status"], name: "index_llama_bot_rails_user_feedbacks_on_status"
+    t.index ["user_id"], name: "index_llama_bot_rails_user_feedbacks_on_user_id"
+  end
+
+  create_table "llama_bot_rails_user_requests", force: :cascade do |t|
+    t.string "title", null: false
+    t.text "description"
+    t.string "request_type", default: "feature", null: false
+    t.string "status", default: "submitted", null: false
+    t.integer "priority", default: 0
+    t.integer "user_id", null: false
+    t.string "user_email"
+    t.text "admin_notes"
+    t.text "response"
+    t.datetime "responded_at"
+    t.integer "votes_count", default: 0
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["priority"], name: "index_llama_bot_rails_user_requests_on_priority"
+    t.index ["request_type"], name: "index_llama_bot_rails_user_requests_on_request_type"
+    t.index ["status"], name: "index_llama_bot_rails_user_requests_on_status"
+    t.index ["user_id"], name: "index_llama_bot_rails_user_requests_on_user_id"
+    t.index ["votes_count"], name: "index_llama_bot_rails_user_requests_on_votes_count"
+  end
+
+  create_table "products", force: :cascade do |t|
+    t.string "code"
+    t.string "name"
+    t.string "category"
+    t.string "unit"
+    t.integer "cost_price"
+    t.integer "selling_price"
+    t.integer "initial_stock"
+    t.integer "min_stock"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "sale_items", force: :cascade do |t|
+    t.bigint "sale_id", null: false
+    t.bigint "product_id", null: false
+    t.integer "quantity"
+    t.integer "selling_price"
+    t.integer "cost_price"
+    t.integer "subtotal"
+    t.integer "profit"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["product_id"], name: "index_sale_items_on_product_id"
+    t.index ["sale_id"], name: "index_sale_items_on_sale_id"
+  end
+
+  create_table "sales", force: :cascade do |t|
+    t.string "number"
+    t.date "sale_date"
+    t.bigint "student_id", null: false
+    t.integer "total_items"
+    t.integer "total_amount"
+    t.string "payment_method"
+    t.integer "amount_paid"
+    t.string "status"
+    t.integer "profit"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["student_id"], name: "index_sales_on_student_id"
+  end
+
+  create_table "stock_entries", force: :cascade do |t|
+    t.string "number"
+    t.date "entry_date"
+    t.string "supplier"
+    t.bigint "product_id", null: false
+    t.integer "quantity"
+    t.integer "cost_price"
+    t.string "note"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["product_id"], name: "index_stock_entries_on_product_id"
+  end
+
+  create_table "students", force: :cascade do |t|
+    t.string "code"
+    t.string "nis"
+    t.string "name"
+    t.string "class_name"
+    t.string "guardian_name"
+    t.string "phone"
+    t.string "address"
+    t.boolean "active"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "users", force: :cascade do |t|
+    t.string "name"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "email", default: "", null: false
+    t.string "encrypted_password", default: "", null: false
+    t.string "reset_password_token"
+    t.datetime "reset_password_sent_at"
+    t.datetime "remember_created_at"
+    t.string "twilio_number"
+    t.boolean "admin"
+    t.string "api_token"
+    t.string "llamapress_user_guid"
+    t.string "otp_secret"
+    t.integer "consumed_timestep"
+    t.boolean "otp_required_for_login", default: false, null: false
+    t.integer "sign_in_count", default: 0, null: false
+    t.datetime "current_sign_in_at"
+    t.datetime "last_sign_in_at"
+    t.string "current_sign_in_ip"
+    t.string "last_sign_in_ip"
+    t.datetime "last_seen_at"
+    t.index ["api_token"], name: "index_users_on_api_token", unique: true
+    t.index ["email"], name: "index_users_on_email", unique: true
+    t.index ["last_seen_at"], name: "index_users_on_last_seen_at"
+    t.index ["llamapress_user_guid"], name: "index_users_on_llamapress_user_guid", unique: true, where: "(llamapress_user_guid IS NOT NULL)"
+    t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
+  end
+
+  create_table "versions", force: :cascade do |t|
+    t.string "item_type", null: false
+    t.bigint "item_id", null: false
+    t.string "event", null: false
+    t.string "whodunnit"
+    t.jsonb "object"
+    t.jsonb "object_changes"
+    t.datetime "created_at"
+    t.string "correlation_id"
+    t.string "request_id"
+    t.string "source"
+    t.bigint "activity_event_id"
+    t.index ["activity_event_id"], name: "idx_versions_activity_event"
+    t.index ["correlation_id"], name: "idx_versions_correlation"
+    t.index ["created_at"], name: "index_versions_on_created_at"
+    t.index ["item_type", "item_id"], name: "index_versions_on_item_type_and_item_id"
+  end
+
+  add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "debt_payments", "sales"
+  add_foreign_key "llama_bot_rails_conversation_participants", "llama_bot_rails_conversations", column: "conversation_id"
+  add_foreign_key "llama_bot_rails_direct_messages", "llama_bot_rails_conversations", column: "conversation_id"
+  add_foreign_key "llama_bot_rails_feedback_comments", "llama_bot_rails_feedback_comments", column: "parent_id", on_delete: :cascade
+  add_foreign_key "llama_bot_rails_shared_links", "active_storage_attachments", column: "attachment_id", on_delete: :cascade
+  add_foreign_key "llama_bot_rails_taggings", "llama_bot_rails_tags", column: "tag_id"
+  add_foreign_key "llama_bot_rails_ticket_comments", "llama_bot_rails_tickets", column: "ticket_id"
+  add_foreign_key "llama_bot_rails_ticket_traces", "llama_bot_rails_tickets", column: "ticket_id"
+  add_foreign_key "llama_bot_rails_tickets", "llama_bot_rails_projects", column: "project_id"
+  add_foreign_key "sale_items", "products"
+  add_foreign_key "sale_items", "sales"
+  add_foreign_key "sales", "students"
+  add_foreign_key "stock_entries", "products"
+end

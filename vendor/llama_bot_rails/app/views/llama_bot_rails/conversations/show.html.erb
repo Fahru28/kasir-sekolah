@@ -1,0 +1,147 @@
+<% content_for :title, "#{@conversation.display_name_for(current_llama_user.id)} - Messages" %>
+
+<% content_for :head do %>
+  <%= action_cable_meta_tag %>
+  <style>
+    .messages-container {
+      /* The subtracted height covers this page's own chrome plus the shared
+         Inbox nav (app bar + tab row) that the layout now renders above it. */
+      height: calc(100vh - 370px);
+      min-height: 400px;
+    }
+  </style>
+<% end %>
+
+  <div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8">
+    <div class="max-w-3xl mx-auto">
+      <!-- Header -->
+      <div class="mb-6">
+        <%= link_to conversations_path, class: "btn btn-ghost btn-sm mb-4" do %>
+          <i class="fas fa-arrow-left"></i> Back to Messages
+        <% end %>
+
+        <div class="bg-white rounded-lg shadow-sm p-4 flex items-center gap-4">
+          <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+            <i class="fas fa-user text-purple-600"></i>
+          </div>
+          <div>
+            <h1 class="text-xl font-bold text-gray-800">
+              <%= @conversation.display_name_for(current_llama_user.id) %>
+            </h1>
+            <p class="text-sm text-gray-500">
+              <% if @conversation.conversation_type == 'direct' %>
+                Direct message
+              <% else %>
+                <%= @conversation.participants.count %> participants
+              <% end %>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Messages -->
+      <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div id="messages-container" class="messages-container overflow-y-auto p-4 space-y-4">
+          <% if @messages.any? %>
+            <% @messages.each do |message| %>
+              <% is_own = message.sender_id == current_llama_user.id %>
+              <div class="flex <%= is_own ? 'justify-end' : 'justify-start' %>">
+                <div class="max-w-xs lg:max-w-md">
+                  <% unless is_own %>
+                    <p class="text-xs text-gray-500 mb-1"><%= message.sender_display_name %></p>
+                  <% end %>
+                  <div class="<%= is_own ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-800' %> rounded-2xl px-4 py-2">
+                    <p class="text-sm whitespace-pre-wrap"><%= message.body %></p>
+                  </div>
+                  <p class="text-xs text-gray-400 mt-1 <%= is_own ? 'text-right' : '' %>">
+                    <%= message.created_at.strftime('%a, %b %d at %I:%M %p') %>
+                  </p>
+                </div>
+              </div>
+            <% end %>
+          <% else %>
+            <div class="text-center py-12">
+              <i class="fas fa-comments text-4xl text-gray-300 mb-4"></i>
+              <p class="text-gray-500">No messages yet</p>
+              <p class="text-sm text-gray-400">Send a message to start the conversation</p>
+            </div>
+          <% end %>
+        </div>
+
+        <!-- Message Input -->
+        <div class="border-t border-gray-200 p-4">
+          <%= form_with url: conversation_messages_path(@conversation), method: :post, class: "flex gap-3", local: true do |f| %>
+            <input type="text"
+                   name="direct_message[body]"
+                   placeholder="Type a message..."
+                   class="input input-bordered flex-1"
+                   required
+                   autocomplete="off"
+                   id="message-input" />
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-paper-plane"></i>
+            </button>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Scroll to bottom on load
+    document.addEventListener('DOMContentLoaded', function() {
+      const container = document.getElementById('messages-container');
+      if (container) {
+        container.scrollTop = container.scrollHeight;
+      }
+
+      // Focus on input
+      document.getElementById('message-input')?.focus();
+    });
+
+    // ActionCable subscription for real-time messages
+    document.addEventListener('DOMContentLoaded', function() {
+      if (typeof ActionCable !== 'undefined') {
+        const cable = ActionCable.createConsumer();
+        const conversationId = <%= @conversation.id %>;
+        const currentUserId = <%= current_llama_user.id %>;
+
+        cable.subscriptions.create(
+          { channel: 'LlamaBotRails::NotificationChannel' },
+          {
+            received(data) {
+              if (data.type === 'new_message' && data.conversation_id === conversationId) {
+                const message = data.message;
+                const isOwn = message.sender_id === currentUserId;
+
+                // Don't add if it's our own message (already added by form submit)
+                if (isOwn) return;
+
+                const container = document.getElementById('messages-container');
+                const messageHtml = `
+                  <div class="flex justify-start">
+                    <div class="max-w-xs lg:max-w-md">
+                      <p class="text-xs text-gray-500 mb-1">${escapeHtml(message.sender_name)}</p>
+                      <div class="bg-gray-100 text-gray-800 rounded-2xl px-4 py-2">
+                        <p class="text-sm whitespace-pre-wrap">${escapeHtml(message.body)}</p>
+                      </div>
+                      <p class="text-xs text-gray-400 mt-1">Just now</p>
+                    </div>
+                  </div>
+                `;
+                container.insertAdjacentHTML('beforeend', messageHtml);
+                container.scrollTop = container.scrollHeight;
+              }
+            }
+          }
+        );
+      }
+    });
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+  </script>
+

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html data-theme="light">
+<head>
+  <title><%= request.host %> | <%= @event.event_type %></title>
+  <%= render "head" %>
+</head>
+<body class="bg-base-200 min-h-screen">
+  <div class="max-w-3xl mx-auto px-4 py-8">
+    <%= link_to activity_path, class: "btn btn-ghost btn-sm mb-4" do %>
+      <i class="fas fa-arrow-left mr-1"></i> Activity
+    <% end %>
+
+    <div class="card bg-base-100 shadow-sm mb-6">
+      <div class="card-body">
+        <h1 class="text-2xl font-bold"><%= llama_activity_sentence(@event) %></h1>
+        <p class="text-sm text-gray-500">
+          <%= llama_activity_timestamp(@event.occurred_at) %>
+          <span class="text-gray-400">&middot; <%= llama_activity_zone_label %></span>
+        </p>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4">
+          <div>
+            <div class="text-xs uppercase tracking-wide text-gray-400">Actor</div>
+            <div class="font-medium">
+              <% if @event.actor_id.present? %>
+                <%= link_to llama_activity_actor_name(@event),
+                      activity_path(actor_id: @event.actor_id),
+                      class: "link link-hover" %>
+              <% else %>
+                <%= llama_activity_actor_name(@event) %>
+              <% end %>
+            </div>
+          </div>
+          <div>
+            <div class="text-xs uppercase tracking-wide text-gray-400">Source</div>
+            <div class="font-medium"><%= llama_activity_source_label(@event) %></div>
+          </div>
+          <div>
+            <div class="text-xs uppercase tracking-wide text-gray-400">Action</div>
+            <div class="font-medium font-mono text-sm"><%= @event.event_type %></div>
+          </div>
+        </div>
+
+        <% if (cause = llama_activity_cause(@event)) %>
+          <div class="alert mt-4 py-2">
+            <i class="fas fa-circle-info"></i>
+            <span class="text-sm">Changed automatically. Triggered by <span class="font-mono"><%= cause %></span>.</span>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-400 mb-2">
+      Affected records (<%= @versions.size %>)
+    </h2>
+
+    <% if @versions.empty? %>
+      <div class="card bg-base-100 shadow-sm mb-6">
+        <div class="card-body py-4">
+          <p class="text-sm text-gray-500">
+            This operation changed no audited records.
+            <% if @event.subject_type.present? %>
+              It was recorded against <%= llama_activity_subject_name(@event) %>.
+            <% end %>
+          </p>
+        </div>
+      </div>
+    <% else %>
+      <div class="space-y-3 mb-6">
+        <% @versions.each do |version| %>
+          <div class="card bg-base-100 shadow-sm">
+            <div class="card-body py-4">
+              <div class="flex items-center justify-between gap-2 flex-wrap">
+                <h3 class="font-semibold"><%= llama_version_record_name(version) %></h3>
+                <div class="flex items-center gap-2">
+                  <span class="badge badge-sm"><%= version.event %></span>
+                  <%= link_to "History",
+                        activity_history_path(subject_type: version.item_type, subject_id: version.item_id),
+                        class: "btn btn-ghost btn-xs" %>
+                </div>
+              </div>
+              <div class="mt-2">
+                <%= render "changes", version: version %>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% if @children.any? %>
+      <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-400 mb-2">Follow-on activity</h2>
+      <div class="card bg-base-100 shadow-sm mb-6">
+        <div class="card-body py-2">
+          <% @children.each do |child| %>
+            <%= render "event_row", event: child %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+
+    <% if can?(:view_activity_technical) %>
+      <details class="collapse collapse-arrow bg-base-100 shadow-sm">
+        <summary class="collapse-title text-sm font-semibold">Technical details</summary>
+        <div class="collapse-content">
+          <dl class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+            <% {
+                 "Correlation ID" => @event.correlation_id,
+                 "Request ID" => @event.request_id,
+                 "Controller" => @event.controller,
+                 "Action" => @event.action,
+                 "Job class" => @event.job_class,
+                 "Job ID" => @event.job_id,
+                 "Trigger" => @event.trigger_name,
+                 "Workspace" => @event.workspace_id,
+                 "Parent event" => @event.parent_event_id
+               }.each do |label, value| %>
+              <% next if value.blank? %>
+              <div>
+                <dt class="text-xs uppercase tracking-wide text-gray-400"><%= label %></dt>
+                <dd class="font-mono text-xs break-all"><%= value %></dd>
+              </div>
+            <% end %>
+          </dl>
+
+          <% if @event.metadata.present? %>
+            <div class="mt-4">
+              <div class="text-xs uppercase tracking-wide text-gray-400 mb-1">Metadata</div>
+              <pre class="text-xs bg-base-200 rounded p-3 overflow-x-auto"><%= JSON.pretty_generate(@event.metadata) %></pre>
+            </div>
+          <% end %>
+
+          <% if @event.parent_event_id.present? %>
+            <%= link_to "View parent operation", activity_event_path(@event.parent_event_id),
+                  class: "btn btn-ghost btn-xs mt-3" %>
+          <% end %>
+        </div>
+      </details>
+    <% end %>
+  </div>
+</body>
+</html>

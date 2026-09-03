@@ -1,0 +1,322 @@
+<% content_for :title, "#{@request.title} - LlamaBotRails" %>
+
+<% content_for :head do %>
+  <script>
+    function toggleReplyForm(commentId) {
+      const form = document.getElementById('reply-form-' + commentId);
+      if (form) {
+        form.classList.toggle('hidden');
+        if (!form.classList.contains('hidden')) {
+          form.querySelector('textarea').focus();
+        }
+      }
+    }
+
+    function openVideoModal(src, type) {
+      const modal = document.getElementById('video-modal');
+      const video = document.getElementById('modal-video');
+      const source = document.getElementById('modal-video-source');
+      source.src = src;
+      source.type = type;
+      video.load();
+      modal.showModal();
+    }
+
+    function shareAttachment(attachmentId) {
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+      fetch(window.location.pathname + '/share_attachment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
+        body: JSON.stringify({ attachment_id: attachmentId })
+      })
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('share-url').value = data.url;
+        document.getElementById('share-modal').showModal();
+      })
+      .catch(err => {
+        console.error('Failed to create share link:', err);
+        alert('Failed to create share link');
+      });
+    }
+
+    function copyShareUrl() {
+      const input = document.getElementById('share-url');
+      input.select();
+      input.setSelectionRange(0, 99999);
+      document.execCommand('copy');
+
+      const btn = document.getElementById('copy-share-btn');
+      const originalHtml = btn.innerHTML;
+      btn.innerHTML = '<i class="fas fa-check"></i>';
+      btn.classList.add('btn-success');
+      btn.classList.remove('btn-primary');
+      setTimeout(() => {
+        btn.innerHTML = originalHtml;
+        btn.classList.remove('btn-success');
+        btn.classList.add('btn-primary');
+      }, 2000);
+    }
+  </script>
+<% end %>
+
+  <div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+      <!-- Back Link -->
+      <div class="mb-6">
+        <%= link_to user_requests_path, class: "btn btn-ghost btn-sm" do %>
+          <i class="fas fa-arrow-left"></i> Back to Requests
+        <% end %>
+      </div>
+
+      <!-- Main Card -->
+      <div class="bg-white rounded-lg shadow-sm p-8">
+        <!-- Header -->
+        <div class="flex items-start justify-between mb-6">
+          <div>
+            <div class="flex items-center gap-3 mb-3">
+              <span class="badge badge-outline">
+                <i class="fas <%= request_type_icon(@request.request_type) %> mr-1"></i>
+                <%= @request.request_type.humanize %>
+              </span>
+              <span class="badge <%= request_status_badge_class(@request.status) %>">
+                <i class="fas <%= request_status_icon(@request.status) %> mr-1"></i>
+                <%= @request.status.humanize %>
+              </span>
+              <span class="badge <%= priority_badge_class(@request.priority) %>">
+                <%= priority_label(@request.priority) %> Priority
+              </span>
+            </div>
+            <h1 class="text-2xl font-bold text-gray-800"><%= @request.title %></h1>
+          </div>
+
+          <div class="flex gap-2">
+            <% if can?(:moderate_feedback) || @request.user_id == current_llama_user&.id %>
+              <%= link_to edit_user_request_path(@request), class: "btn btn-outline btn-sm" do %>
+                <i class="fas fa-edit"></i> Edit
+              <% end %>
+            <% end %>
+            <% if can?(:moderate_feedback) || @request.user_id == current_llama_user&.id %>
+              <%= button_to user_request_path(@request), method: :delete, data: { turbo_confirm: "Are you sure you want to delete this request?" }, class: "btn btn-error btn-sm" do %>
+                <i class="fas fa-trash"></i> Delete
+              <% end %>
+            <% end %>
+          </div>
+        </div>
+
+        <!-- Meta Info -->
+        <div class="flex flex-wrap items-center gap-4 text-sm text-gray-500 mb-6 pb-6 border-b">
+          <span><i class="fas fa-user mr-1"></i> <%= @request.display_author %></span>
+          <span><i class="fas fa-calendar mr-1"></i> <%= @request.created_at.strftime('%B %d, %Y at %I:%M %p') %></span>
+          <% if @request.responded_at %>
+            <span><i class="fas fa-reply mr-1"></i> Responded <%= time_ago_in_words(@request.responded_at) %> ago</span>
+          <% end %>
+        </div>
+
+        <!-- Description -->
+        <div class="mb-6">
+          <h3 class="text-lg font-semibold text-gray-700 mb-3">Description</h3>
+          <div class="prose prose-sm max-w-none text-gray-600 whitespace-pre-wrap"><%= @request.description %></div>
+        </div>
+
+        <!-- Response (if present) -->
+        <% if @request.response.present? %>
+          <div class="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 class="text-lg font-semibold text-blue-800 mb-2">
+              <i class="fas fa-reply mr-2"></i>Official Response
+            </h3>
+            <p class="text-blue-700 whitespace-pre-wrap"><%= @request.response %></p>
+          </div>
+        <% end %>
+
+        <!-- Admin Notes (if present and user is admin) -->
+        <% if @request.admin_notes.present? && can?(:moderate_feedback) %>
+          <div class="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <h3 class="text-lg font-semibold text-yellow-800 mb-2">
+              <i class="fas fa-sticky-note mr-2"></i>Admin Notes
+            </h3>
+            <p class="text-yellow-700 whitespace-pre-wrap"><%= @request.admin_notes %></p>
+          </div>
+        <% end %>
+
+        <!-- Admin Response Form -->
+        <% if can?(:moderate_feedback) && @request.response.blank? %>
+          <div class="mb-6 bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <h3 class="text-lg font-semibold text-gray-800 mb-3">
+              <i class="fas fa-reply mr-2"></i>Send Response
+            </h3>
+            <%= form_with url: respond_to_request_user_request_path(@request), method: :post, class: "space-y-3" do |f| %>
+              <textarea name="response" class="textarea textarea-bordered w-full h-24" placeholder="Write your official response..."></textarea>
+              <button type="submit" class="btn btn-primary btn-sm">
+                <i class="fas fa-paper-plane mr-1"></i> Send Response
+              </button>
+            <% end %>
+          </div>
+        <% end %>
+
+        <!-- Tags -->
+        <div class="mb-6">
+          <h3 class="text-lg font-semibold text-gray-700 mb-3">Tags</h3>
+          <div class="flex flex-wrap gap-2">
+            <% @request.tags.each do |tag| %>
+              <span class="badge" style="<%= tag_style(tag) %>">
+                <%= tag.name %>
+                <% if can?(:manage_tags) %>
+                  <%= button_to remove_tag_user_request_path(@request, tag_id: tag.id), method: :delete, class: "ml-1 hover:opacity-75" do %>
+                    <i class="fas fa-times text-xs"></i>
+                  <% end %>
+                <% end %>
+              </span>
+            <% end %>
+            <% if @request.tags.empty? %>
+              <span class="text-gray-400 text-sm">No tags</span>
+            <% end %>
+          </div>
+
+          <% if can?(:manage_tags) %>
+            <div class="mt-3">
+              <%= form_with url: add_tag_user_request_path(@request), method: :post, class: "flex items-center gap-2" do |f| %>
+                <select name="tag_id" class="select select-bordered select-sm">
+                  <option value="">Add a tag...</option>
+                  <% LlamaBotRails::Tag.ordered.each do |tag| %>
+                    <% unless @request.tags.include?(tag) %>
+                      <option value="<%= tag.id %>"><%= tag.name %></option>
+                    <% end %>
+                  <% end %>
+                </select>
+                <button type="submit" class="btn btn-primary btn-sm">
+                  <i class="fas fa-plus"></i> Add
+                </button>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+
+        <!-- Attachments -->
+        <% if @request.attachments.any? %>
+          <div class="mb-6">
+            <h3 class="text-lg font-semibold text-gray-700 mb-3">Attachments</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <% @request.attachments.each do |attachment| %>
+                <div class="bg-gray-100 rounded-lg p-3 text-center relative group">
+                  <% if attachment.image? %>
+                    <%= link_to main_app.rails_blob_path(attachment, disposition: 'inline'), target: '_blank' do %>
+                      <%= image_tag main_app.rails_blob_path(attachment, disposition: 'inline'), class: "w-full h-24 object-cover rounded mb-2" %>
+                    <% end %>
+                  <% elsif attachment.video? %>
+                    <div class="relative cursor-pointer" onclick="openVideoModal('<%= main_app.rails_blob_path(attachment, disposition: 'inline') %>', '<%= attachment.content_type %>')">
+                      <video class="w-full h-24 rounded mb-2 object-cover" preload="metadata" muted>
+                        <source src="<%= main_app.rails_blob_path(attachment, disposition: 'inline') %>" type="<%= attachment.content_type %>">
+                      </video>
+                      <div class="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors rounded">
+                        <i class="fas fa-play-circle text-white text-3xl"></i>
+                      </div>
+                    </div>
+                  <% else %>
+                    <div class="w-full h-24 flex items-center justify-center mb-2">
+                      <i class="fas <%= attachment_icon(attachment.content_type) %> text-4xl text-gray-400"></i>
+                    </div>
+                  <% end %>
+
+                  <!-- Share Button -->
+                  <button
+                    class="absolute top-1 right-1 btn btn-xs btn-circle btn-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                    onclick="event.stopPropagation(); shareAttachment(<%= attachment.id %>)"
+                    title="Get shareable link"
+                  >
+                    <i class="fas fa-share-alt text-xs"></i>
+                  </button>
+
+                  <p class="text-xs text-gray-600 truncate"><%= attachment.filename %></p>
+                  <div class="flex justify-center gap-2 mt-2">
+                    <%= link_to main_app.rails_blob_path(attachment, disposition: 'attachment'), class: "btn btn-ghost btn-xs" do %>
+                      <i class="fas fa-download"></i>
+                    <% end %>
+                    <% if can?(:moderate_feedback) %>
+                      <%= button_to remove_attachment_user_request_path(@request, attachment_id: attachment.id), method: :delete, class: "btn btn-ghost btn-xs text-red-500", data: { turbo_confirm: "Remove this attachment?" } do %>
+                        <i class="fas fa-trash"></i>
+                      <% end %>
+                    <% end %>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+
+        <!-- Video Modal -->
+        <dialog id="video-modal" class="modal">
+          <div class="modal-box max-w-4xl p-0 bg-black">
+            <video id="modal-video" controls autoplay class="w-full">
+              <source id="modal-video-source" src="" type="">
+            </video>
+            <form method="dialog" class="absolute top-2 right-2">
+              <button class="btn btn-sm btn-circle btn-ghost text-white hover:bg-white/20">
+                <i class="fas fa-times"></i>
+              </button>
+            </form>
+          </div>
+          <form method="dialog" class="modal-backdrop">
+            <button>close</button>
+          </form>
+        </dialog>
+
+        <!-- Share Modal -->
+        <dialog id="share-modal" class="modal">
+          <div class="modal-box">
+            <h3 class="font-bold text-lg mb-4"><i class="fas fa-share-alt text-primary mr-2"></i>Share Link</h3>
+            <p class="text-sm text-gray-500 mb-3">Anyone with this link can view the file:</p>
+            <div class="flex gap-2">
+              <input type="text" id="share-url" class="input input-bordered flex-1" readonly />
+              <button onclick="copyShareUrl()" class="btn btn-primary" id="copy-share-btn">
+                <i class="fas fa-copy"></i>
+              </button>
+            </div>
+            <div class="modal-action">
+              <form method="dialog">
+                <button class="btn">Close</button>
+              </form>
+            </div>
+          </div>
+          <form method="dialog" class="modal-backdrop">
+            <button>close</button>
+          </form>
+        </dialog>
+
+        <!-- Comments Section -->
+        <div class="mt-8 pt-6 border-t">
+          <h3 class="text-lg font-semibold text-gray-700 mb-4">
+            <i class="fas fa-comments mr-2"></i>Comments (<%= @comments.count %>)
+          </h3>
+
+          <!-- Comment Form -->
+          <% if current_llama_user %>
+            <%= form_with model: LlamaBotRails::FeedbackComment.new, url: user_request_comments_path(@request), class: "mb-6" do |f| %>
+              <div class="flex gap-3">
+                <div class="flex-1">
+                  <%= f.text_area :body, placeholder: "Add a comment...", class: "textarea textarea-bordered w-full", rows: 2 %>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                  <i class="fas fa-paper-plane"></i>
+                </button>
+              </div>
+            <% end %>
+          <% end %>
+
+          <!-- Comments List -->
+          <div class="space-y-4">
+            <% @comments.each do |comment| %>
+              <%= render partial: 'llama_bot_rails/user_requests/comment', locals: { comment: comment, request: @request, depth: 0 } %>
+            <% end %>
+
+            <% if @comments.empty? %>
+              <p class="text-gray-400 text-center py-4">No comments yet</p>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>

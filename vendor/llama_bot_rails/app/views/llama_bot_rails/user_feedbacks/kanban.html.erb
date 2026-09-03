@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html data-theme="light">
+<head>
+  <title>Feedback Kanban - LlamaBotRails</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <%= csrf_meta_tags %>
+  <style>
+    .sortable-ghost {
+      opacity: 0.5;
+      background-color: #dbeafe;
+    }
+    .sortable-drag {
+      opacity: 1;
+    }
+    .kanban-card {
+      cursor: move;
+    }
+
+    /* Toast Notification Styles */
+    @keyframes toastSlideIn {
+      from { opacity: 0; transform: translateX(400px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes toastSlideOut {
+      from { opacity: 1; transform: translateX(0); }
+      to { opacity: 0; transform: translateX(400px); }
+    }
+    @keyframes progressShrink {
+      from { width: 100%; }
+      to { width: 0%; }
+    }
+    .toast {
+      animation: toastSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+      pointer-events: auto;
+    }
+    .toast.exiting {
+      animation: toastSlideOut 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+    .toast-progress {
+      animation: progressShrink linear;
+    }
+    .toast-success {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      box-shadow: 0 8px 32px rgba(16, 185, 129, 0.15);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="fixed top-6 right-6 z-50 pointer-events-none"></div>
+
+  <div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8">
+    <div class="max-w-7xl mx-auto">
+      <!-- Header -->
+      <div class="mb-8 flex items-center justify-between">
+        <div>
+          <h1 class="text-4xl font-bold text-gray-800 flex items-center gap-3">
+            <i class="fas fa-columns text-blue-600"></i>
+            Feedback Kanban
+          </h1>
+          <p class="text-gray-600 mt-2">Drag & drop feedback to change status</p>
+        </div>
+        <div class="flex gap-2">
+          <%= link_to dashboard_user_feedbacks_path, class: "btn btn-outline btn-sm" do %>
+            <i class="fas fa-chart-bar"></i> Dashboard
+          <% end %>
+          <%= link_to user_feedbacks_path, class: "btn btn-outline btn-sm" do %>
+            <i class="fas fa-list"></i> List View
+          <% end %>
+          <%= link_to tags_path, class: "btn btn-outline btn-sm" do %>
+            <i class="fas fa-tags"></i> Manage Tags
+          <% end %>
+        </div>
+      </div>
+
+      <!-- Kanban Board -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <% LlamaBotRails::UserFeedback::STATUSES.each do |status| %>
+          <%
+            gradient = case status
+                       when 'open' then 'from-blue-700 to-blue-600'
+                       when 'under_review' then 'from-amber-600 to-amber-500'
+                       when 'acknowledged' then 'from-purple-700 to-purple-600'
+                       when 'in_progress' then 'from-cyan-600 to-cyan-500'
+                       when 'resolved' then 'from-green-700 to-green-600'
+                       when 'closed' then 'from-gray-700 to-gray-600'
+                       else 'from-gray-700 to-gray-600'
+                       end
+          %>
+
+          <div class="bg-white rounded-lg shadow-sm overflow-hidden flex flex-col h-full">
+            <!-- Column Header -->
+            <div class="bg-gradient-to-r <%= gradient %> px-4 py-3 text-white">
+              <div class="flex items-center gap-2 mb-1">
+                <i class="fas <%= feedback_status_icon(status) %>"></i>
+                <h2 class="font-semibold text-sm uppercase tracking-wide"><%= status.humanize %></h2>
+              </div>
+              <span class="inline-block bg-yellow-300 text-xs px-2 py-1 rounded-full text-gray-900 font-semibold" id="count-<%= status %>">
+                <%= @feedbacks_by_status[status]&.count || 0 %> items
+              </span>
+            </div>
+
+            <!-- Sortable Container -->
+            <div
+              class="flex-1 p-3 bg-gray-50 overflow-y-auto space-y-2 sortable-column"
+              data-status="<%= status %>"
+              style="min-height: 400px; max-height: 600px;"
+            >
+              <% (@feedbacks_by_status[status] || []).each do |feedback| %>
+                <div
+                  class="kanban-card bg-white rounded-lg p-3 shadow-sm border-l-4 border-blue-500 hover:shadow-md transition-shadow"
+                  data-feedback-id="<%= feedback.id %>"
+                  data-feedback-title="<%= feedback.title %>"
+                  draggable="true"
+                >
+                  <div class="flex items-start justify-between mb-2">
+                    <span class="badge badge-xs <%= feedback_type_badge_class(feedback.feedback_type) %>">
+                      <%= feedback.feedback_type %>
+                    </span>
+                    <span class="badge badge-xs <%= priority_badge_class(feedback.priority) %>">
+                      <%= priority_label(feedback.priority) %>
+                    </span>
+                  </div>
+                  <h3 class="font-semibold text-gray-800 text-sm line-clamp-2 mb-2">
+                    <%= link_to feedback.title, user_feedback_path(feedback), class: "hover:text-blue-600", target: "_blank" %>
+                  </h3>
+                  <div class="text-xs text-gray-500 mb-2">
+                    <span><%= feedback.display_author %></span>
+                    <span class="mx-1">-</span>
+                    <span><%= feedback.created_at.strftime('%a, %b %d') %></span>
+                  </div>
+                  <% if feedback.tags.any? %>
+                    <div class="flex flex-wrap gap-1">
+                      <% feedback.tags.limit(3).each do |tag| %>
+                        <span class="badge badge-xs" style="<%= tag_style(tag) %>"><%= tag.name %></span>
+                      <% end %>
+                      <% if feedback.tags.count > 3 %>
+                        <span class="badge badge-xs badge-ghost">+<%= feedback.tags.count - 3 %></span>
+                      <% end %>
+                    </div>
+                  <% end %>
+                  <div class="flex gap-1 mt-2">
+                    <%= link_to user_feedback_path(feedback), class: "btn btn-ghost btn-xs", title: "View", target: "_blank" do %>
+                      <i class="fas fa-eye text-blue-500"></i>
+                    <% end %>
+                    <%= link_to edit_user_feedback_path(feedback), class: "btn btn-ghost btn-xs", title: "Edit", target: "_blank" do %>
+                      <i class="fas fa-edit text-gray-500"></i>
+                    <% end %>
+                  </div>
+                </div>
+              <% end %>
+
+              <% if (@feedbacks_by_status[status] || []).empty? %>
+                <div class="empty-state flex items-center justify-center h-24 text-gray-400">
+                  <div class="text-center">
+                    <i class="fas fa-inbox text-xl mb-1"></i>
+                    <p class="text-xs">Drop items here</p>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Toast Manager
+    class ToastManager {
+      constructor() {
+        this.container = document.getElementById('toast-container');
+        this.toasts = new Map();
+      }
+
+      show(message, type = 'success', duration = 3000) {
+        const toastId = `toast-${Date.now()}`;
+        const existingToasts = this.container.children.length;
+        const offset = existingToasts * 8;
+
+        const toastEl = document.createElement('div');
+        toastEl.id = toastId;
+        toastEl.className = `toast toast-${type} rounded-lg px-5 py-4 text-white flex items-start gap-4 relative overflow-hidden`;
+        toastEl.style.cssText = `position: absolute; top: ${offset}px; right: 0; min-width: 280px; z-index: ${1000 + existingToasts};`;
+        toastEl.innerHTML = `
+          <div class="flex-shrink-0 text-lg mt-0.5">
+            <i class="fas fa-check-circle"></i>
+          </div>
+          <div class="flex-1 text-sm font-medium leading-relaxed">${message}</div>
+          <button onclick="toastManager.dismiss('${toastId}')" class="flex-shrink-0 ml-2 hover:opacity-75 p-1 -mr-2">
+            <i class="fas fa-times text-lg"></i>
+          </button>
+          <div class="toast-progress absolute bottom-0 left-0 h-1 bg-white/30" style="animation-duration: ${duration}ms;"></div>
+        `;
+
+        this.container.appendChild(toastEl);
+        this.toasts.set(toastId, { element: toastEl, timeout: null });
+
+        const timeout = setTimeout(() => this.dismiss(toastId), duration);
+        this.toasts.get(toastId).timeout = timeout;
+
+        return toastId;
+      }
+
+      dismiss(toastId) {
+        const toast = this.toasts.get(toastId);
+        if (!toast) return;
+
+        if (toast.timeout) clearTimeout(toast.timeout);
+        toast.element.classList.add('exiting');
+
+        setTimeout(() => {
+          toast.element.remove();
+          this.toasts.delete(toastId);
+          this.repositionToasts();
+        }, 300);
+      }
+
+      repositionToasts() {
+        let index = 0;
+        this.container.querySelectorAll('.toast:not(.exiting)').forEach(el => {
+          el.style.top = `${index * 8}px`;
+          el.style.zIndex = 1000 + index;
+          index++;
+        });
+      }
+    }
+
+    const toastManager = new ToastManager();
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+    let sortableInstances = [];
+
+    function initKanban() {
+      if (typeof Sortable === 'undefined') {
+        setTimeout(initKanban, 100);
+        return;
+      }
+
+      const columns = document.querySelectorAll('.sortable-column');
+
+      columns.forEach((column) => {
+        if (column.__sortableInstance) return;
+
+        const instance = new Sortable(column, {
+          group: { name: 'feedbacks', pull: true, put: true },
+          animation: 150,
+          ghostClass: 'sortable-ghost',
+          dragClass: 'sortable-drag',
+          forceFallback: false,
+          filter: '.empty-state',
+
+          onEnd: function(event) {
+            const feedbackId = event.item.getAttribute('data-feedback-id');
+            let feedbackTitle = event.item.getAttribute('data-feedback-title') || 'Feedback';
+            if (feedbackTitle.length > 30) {
+              feedbackTitle = feedbackTitle.substring(0, 30) + '...';
+            }
+            const newStatus = event.to.getAttribute('data-status');
+            const oldStatus = event.from.getAttribute('data-status');
+            const statusLabel = newStatus.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+
+            const isColumnChange = oldStatus !== newStatus;
+
+            updateCounts();
+            removeEmptyStates();
+
+            if (isColumnChange) {
+              fetch(`/llama_bot/feedback/${feedbackId}/move`, {
+                method: 'PATCH',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-CSRF-Token': csrfToken
+                },
+                body: JSON.stringify({ status: newStatus })
+              })
+              .then(response => response.json())
+              .then(data => {
+                if (data.success) {
+                  toastManager.show(
+                    `<strong>${feedbackTitle}</strong> moved to <strong>${statusLabel}</strong>`,
+                    'success',
+                    2500
+                  );
+                } else {
+                  console.error('Failed to move feedback:', data.error);
+                  location.reload();
+                }
+              })
+              .catch(error => {
+                console.error('Error moving feedback:', error);
+                location.reload();
+              });
+            }
+          }
+        });
+
+        column.__sortableInstance = instance;
+        sortableInstances.push(instance);
+      });
+    }
+
+    function updateCounts() {
+      document.querySelectorAll('.sortable-column').forEach(column => {
+        const status = column.getAttribute('data-status');
+        const count = column.querySelectorAll('.kanban-card').length;
+        const countBadge = document.getElementById(`count-${status}`);
+        if (countBadge) {
+          countBadge.textContent = `${count} item${count !== 1 ? 's' : ''}`;
+        }
+      });
+    }
+
+    function removeEmptyStates() {
+      document.querySelectorAll('.empty-state').forEach(el => el.remove());
+    }
+
+    // Initialize
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initKanban);
+    } else {
+      initKanban();
+    }
+
+    // Re-initialize on Turbo navigation
+    document.addEventListener('turbo:load', () => {
+      sortableInstances.forEach(i => i && i.destroy());
+      sortableInstances = [];
+      setTimeout(initKanban, 100);
+    });
+  </script>
+</body>
+</html>

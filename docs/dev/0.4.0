@@ -1,0 +1,30 @@
+0.4.0b:
+- [x] Add Rack Attack to base image
+- [x] Add Paper Trail to base image
+
+0.4.0c:
+- [x] Improve the feedback dashboard - Add in notifications & in-app messaging between users
+
+0.4.0d:
+- [x] Fix the images being deleted if you edit a form.
+- [x] Add filter for feedback dashboard, and create accordion to easily collapse feedback sections from specific users
+
+0.4.0e:
+- [x] Add user dropdown when creating a new conversation thread with users (easier to direct message)
+
+0.4.0f: 
+- [x] Add mentions in feedback, and improve UI/UX in feedback
+
+0.4.0h:
+- [x] Add Google OAuth, Gmail, & Web Push Gem
+- [x] Bump devise defaults so sign outs don't occur in 30 mins of inactivity, but 2 weeks of inactivity
+
+0.4.0j: 
+- [x] Add configurable email notifications for new feedback coming through
+- [x] Improve the Ticket Kanban board, add a search bar on there, a date range picker, and a copy button to copy the title of the text on a ticket
+- [x] Add the select mouse button on the feedback forum
+- [x] Replace the old Leonardo logo with our new Purple LlamaPress Leonardo logo
+
+0.4.0k:
+- [x] Add in 2fa Gems
+- [x] Add in release notes functionality so that users can see the version they're on + release notes on what's different, and potentially email directly from the app with that.

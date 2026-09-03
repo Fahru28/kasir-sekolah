@@ -1,0 +1,99 @@
+<%#
+  Keeps this user's unread direct-message count current in two places: the red
+  badge on the Inbox tab bar's own Messages tab, and — when this page is framed
+  by the chat UI — the red badge on that UI's Inbox tab, via postMessage.
+
+  Why a bridge and not a fetch from the chat UI: LlamaBot serves the chat at one
+  origin and the Rails app at another, so the chat window can neither read the
+  Devise session nor call this endpoint without cross-site credentials. This page
+  is already inside the session, so it does the counting and posts the number up.
+
+  Polling rather than ActionCable on purpose: the conversation views have no cable
+  consumer loaded (their ActionCable block is a no-op today), and a number that is
+  at most POLL_MS stale is the right trade for a badge. If a consumer is ever
+  wired up here, keep this as the fallback — the badge must survive a dead cable.
+%>
+<script>
+  (function () {
+    var POLL_MS = 20000;
+    var ENDPOINT = "<%= j unread_count_notifications_path %>";
+    var FRAMED = window.parent !== window;
+    var timer = null;
+    var lastPublished = null;
+
+    // Renders the count on this page's own Messages tab. Kept in sync with the
+    // server-rendered markup in shared/_inbox_nav: zero hides the badge, because
+    // an empty red dot reads as "something is wrong" rather than "nothing new".
+    function paintNavBadge(count) {
+      var badge = document.querySelector('[data-llamabot="inbox-nav-unread-badge"]');
+      if (!badge) return;
+
+      if (count > 0) {
+        badge.textContent = count > 99 ? '99+' : String(count);
+        badge.setAttribute('aria-label', count + ' unread message' + (count === 1 ? '' : 's'));
+        badge.classList.remove('hidden');
+      } else {
+        badge.textContent = '0';
+        badge.removeAttribute('aria-label');
+        badge.classList.add('hidden');
+      }
+    }
+
+    function publish(count) {
+      paintNavBadge(count);
+
+      // Nothing to post up to when this page is opened directly rather than framed.
+      if (!FRAMED) return;
+
+      // Only the count crosses the boundary, so '*' is acceptable here — we do
+      // not know the chat UI's origin (it varies per instance and per protocol)
+      // and there is nothing session-bearing in the payload.
+      window.parent.postMessage({
+        source: 'llamabot-notifications',
+        type: 'unread-count',
+        unreadMessages: count
+      }, '*');
+    }
+
+    function poll() {
+      fetch(ENDPOINT, {
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json' }
+      })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (data) {
+          if (!data) return;
+          var count = Number(data.unread_message_count);
+          if (!isFinite(count)) return;
+          // Re-publish unconditionally on the first poll so the badge clears a
+          // stale value left over from a previous session in the same tab.
+          if (count === lastPublished) return;
+          lastPublished = count;
+          publish(count);
+        })
+        .catch(function () {
+          // A signed-out or restarting Rails app must not spam the console; the
+          // next tick picks the count back up once it is reachable.
+        });
+    }
+
+    function start() {
+      if (timer) return;
+      poll();
+      timer = setInterval(poll, POLL_MS);
+    }
+
+    function stop() {
+      if (!timer) return;
+      clearInterval(timer);
+      timer = null;
+    }
+
+    // Don't poll a backgrounded tab; catch up the moment it comes back.
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'hidden') { stop(); } else { start(); }
+    });
+
+    start();
+  })();
+</script>

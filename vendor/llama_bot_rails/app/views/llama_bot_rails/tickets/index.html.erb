@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html data-theme="light">
+<head>
+  <title><%= request.host %> | Tickets</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2310b981'><path d='M22 10V6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v4c1.1 0 2 .9 2 2s-.9 2-2 2v4c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2v-4c-1.1 0-2-.9-2-2s.9-2 2-2zm-2-1.46c-1.19.69-2 1.99-2 3.46s.81 2.77 2 3.46V18H4v-2.54c1.19-.69 2-1.99 2-3.46 0-1.48-.81-2.77-2-3.46V6h16v2.54z'/></svg>">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <%= csrf_meta_tags %>
+  <style>
+    .sortable-ghost {
+      opacity: 0.5;
+      background-color: #dbeafe;
+    }
+    .sortable-drag {
+      opacity: 1;
+    }
+
+    /* Toast Notification Styles */
+    @keyframes toastSlideIn {
+      from {
+        opacity: 0;
+        transform: translateX(400px) rotateY(90deg);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0) rotateY(0);
+      }
+    }
+
+    @keyframes toastSlideOut {
+      from {
+        opacity: 1;
+        transform: translateX(0) rotateY(0);
+      }
+      to {
+        opacity: 0;
+        transform: translateX(400px) rotateY(-90deg);
+      }
+    }
+
+    @keyframes progressShrink {
+      from { width: 100%; }
+      to { width: 0%; }
+    }
+
+    .toast {
+      animation: toastSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+      pointer-events: auto;
+    }
+
+    .toast.exiting {
+      animation: toastSlideOut 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
+    .toast-progress {
+      animation: progressShrink linear;
+    }
+
+    .toast-success {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      box-shadow: 0 8px 32px rgba(16, 185, 129, 0.15);
+    }
+
+    .toast-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* Tooltip container - positioned via JS to escape overflow */
+    #ticket-tooltip {
+      position: fixed;
+      background: #1f2937;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      white-space: normal;
+      word-wrap: break-word;
+      z-index: 99999;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      pointer-events: none;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- Toast Container (stacked with overlap) -->
+  <div id="toast-container" class="fixed top-6 right-6 z-50 pointer-events-none"></div>
+
+  <!-- Tooltip (positioned via JS) -->
+  <div id="ticket-tooltip"></div>
+
+  <!-- Project Selector Dropdown (positioned via JS) -->
+  <div id="project-selector" class="fixed hidden z-[9999] bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[160px] max-h-[300px] overflow-y-auto">
+    <div class="px-3 py-2 text-xs font-semibold text-gray-500 border-b">Select Project</div>
+    <button
+      type="button"
+      class="project-option w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
+      data-project-id=""
+      data-project-name="No Project"
+    >
+      <i class="fas fa-times-circle text-gray-400 text-xs"></i>
+      No Project
+    </button>
+    <% @projects.each do |project| %>
+      <button
+        type="button"
+        class="project-option w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
+        data-project-id="<%= project.id %>"
+        data-project-name="<%= project.name %>"
+      >
+        <i class="fas fa-folder text-blue-500 text-xs"></i>
+        <%= project.name %>
+      </button>
+    <% end %>
+  </div>
+
+  <div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8">
+    <div class="max-w-7xl mx-auto">
+      <%# No page title: the Inbox tab bar above already names this page. Only
+          the hint the title carried is kept. %>
+      <div class="mb-4">
+        <p class="text-gray-600">Drag & drop tickets to organize your workflow</p>
+      </div>
+
+      <!-- Controls -->
+      <div class="mb-6 flex items-center gap-4 flex-wrap">
+        <button
+          type="button"
+          onclick="location.reload()"
+          class="btn btn-outline btn-sm"
+          title="Refresh board"
+        >
+          <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+
+        <!-- Project Filter -->
+        <div class="flex items-center gap-2">
+          <label class="text-sm text-gray-600">Project:</label>
+          <select id="project-filter" class="select select-bordered select-sm" onchange="filterByProject(this.value)">
+            <option value="">All Projects</option>
+            <% @projects.each do |project| %>
+              <option value="<%= project.id %>" <%= @selected_project_id.to_s == project.id.to_s ? 'selected' : '' %>>
+                <%= project.name %> (<%= project.ticket_count %>)
+              </option>
+            <% end %>
+          </select>
+        </div>
+
+        <%= link_to llama_bot_rails.projects_path, class: "btn btn-outline btn-sm" do %>
+          <i class="fas fa-folder-open"></i> Projects
+        <% end %>
+
+        <%= link_to llama_bot_rails.timeline_tickets_path(project_id: @selected_project_id), class: "btn btn-outline btn-sm" do %>
+          <i class="fas fa-stream"></i> Timeline
+        <% end %>
+
+        <%= link_to llama_bot_rails.new_ticket_path, class: "btn btn-primary btn-sm ml-auto" do %>
+          <i class="fas fa-plus"></i> New Ticket
+        <% end %>
+      </div>
+
+      <!-- Search & Date Range Filters -->
+      <div class="mb-6 flex items-center gap-3 flex-wrap">
+        <div class="relative">
+          <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none"></i>
+          <input
+            id="ticket-search"
+            type="text"
+            oninput="applyTicketFilters()"
+            placeholder="Search title or details..."
+            class="input input-bordered input-sm pl-9 w-72"
+          >
+        </div>
+
+        <!-- Date Range (compact popover) -->
+        <div class="relative">
+          <button type="button" id="date-range-btn" onclick="toggleDateRange(event)" class="btn btn-outline btn-sm gap-2">
+            <i class="fas fa-calendar-alt text-gray-500"></i>
+            <span id="date-range-label">Any date</span>
+            <i class="fas fa-chevron-down text-[10px] opacity-60"></i>
+          </button>
+          <div id="date-range-panel" class="absolute hidden z-[9999] mt-1 left-0 bg-white rounded-lg shadow-xl border border-gray-200 p-3 w-60">
+            <label class="block text-xs font-medium text-gray-500 mb-1">From</label>
+            <input id="filter-date-start" type="date" onchange="applyTicketFilters()" class="input input-bordered input-sm w-full mb-3">
+            <label class="block text-xs font-medium text-gray-500 mb-1">To</label>
+            <input id="filter-date-end" type="date" onchange="applyTicketFilters()" class="input input-bordered input-sm w-full">
+          </div>
+        </div>
+
+        <button type="button" onclick="clearTicketFilters()" class="btn btn-ghost btn-sm" title="Clear search & date filters">
+          <i class="fas fa-times"></i> Clear
+        </button>
+        <span id="filter-result-count" class="text-sm text-gray-500"></span>
+      </div>
+
+      <!-- Kanban Board -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+        <% LlamaBotRails::Ticket::STATUSES.each do |status| %>
+          <%
+            status_label = status.humanize
+            icon = case status
+                   when 'backlog' then 'fa-inbox'
+                   when 'assigned' then 'fa-user-check'
+                   when 'in_progress' then 'fa-spinner'
+                   when 'review' then 'fa-eye'
+                   when 'incomplete' then 'fa-exclamation-triangle'
+                   when 'done' then 'fa-check-circle'
+                   end
+            gradient = case status
+                       when 'backlog' then 'from-gray-700 to-gray-600'
+                       when 'assigned' then 'from-blue-700 to-blue-600'
+                       when 'in_progress' then 'from-amber-600 to-amber-500'
+                       when 'review' then 'from-purple-700 to-purple-600'
+                       when 'incomplete' then 'from-red-700 to-red-600'
+                       when 'done' then 'from-green-700 to-green-600'
+                       end
+          %>
+
+          <div class="bg-white rounded-lg shadow-sm overflow-hidden flex flex-col h-full">
+            <!-- Column Header -->
+            <div class="bg-gradient-to-r <%= gradient %> px-4 py-3 text-white">
+              <div class="flex items-center gap-2 mb-1">
+                <i class="fas <%= icon %>"></i>
+                <h2 class="font-semibold text-sm uppercase tracking-wide"><%= status_label %></h2>
+              </div>
+              <span class="inline-block bg-yellow-300 text-xs px-2 py-1 rounded-full text-gray-900 font-semibold" id="count-<%= status %>">
+                <%= @tickets[status]&.count || 0 %> tickets
+              </span>
+            </div>
+
+            <!-- Sortable Container -->
+            <div
+              class="flex-1 p-4 bg-gray-50 overflow-y-auto space-y-3 sortable-column"
+              data-status="<%= status %>"
+              style="min-height: 400px;"
+            >
+              <% (@tickets[status] || []).each_with_index do |ticket, idx| %>
+                <div
+                  class="kanban-card bg-white rounded-lg p-3 shadow-sm border-l-4 border-blue-500 cursor-move hover:shadow-md transition-shadow ticket-card"
+                  data-ticket-id="<%= ticket.id %>"
+                  data-position="<%= idx %>"
+                  data-ticket-title="<%= escape_javascript(ticket.title) %>"
+                  data-ticket-description="<%= escape_javascript(ticket.description.to_s) %>"
+                  data-ticket-type="<%= escape_javascript(ticket.ticket_type.to_s) %>"
+                  data-ticket-status="<%= escape_javascript(ticket.status.to_s) %>"
+                  data-ticket-notes="<%= escape_javascript(ticket.notes.to_s) %>"
+                  data-ticket-research-notes="<%= escape_javascript(ticket.research_notes.to_s) %>"
+                  data-ticket-agent-notes="<%= escape_javascript(ticket.agent_notes.to_s) %>"
+                  data-ticket-created="<%= ticket.created_at.iso8601 %>"
+                  draggable="true"
+                  data-tooltip="<%= ticket.title %>"
+                >
+                  <div class="mb-2 flex items-start gap-1">
+                    <h3 class="font-semibold text-gray-800 text-sm line-clamp-2 flex-1">
+                      <%= ticket.title %>
+                    </h3>
+                    <button
+                      type="button"
+                      onclick="copyTitleToClipboard(this); event.stopPropagation();"
+                      class="btn btn-ghost btn-xs px-1 copy-title-btn shrink-0"
+                      title="Copy title"
+                    >
+                      <i class="fas fa-copy text-gray-400 text-xs"></i>
+                    </button>
+                  </div>
+                  <div class="flex gap-1 mb-2">
+                    <button
+                      type="button"
+                      onclick="copyTicketToClipboard(this.closest('.kanban-card')); event.stopPropagation();"
+                      class="btn btn-ghost btn-xs copy-ticket-btn"
+                      title="Copy as Markdown"
+                    >
+                      <i class="fas fa-copy text-green-600"></i>
+                    </button>
+                    <% unless ticket.status == 'review' || ticket.status == 'done' %>
+                      <button
+                        type="button"
+                        onclick="moveToReview(<%= ticket.id %>, '<%= escape_javascript(ticket.title) %>'); event.stopPropagation();"
+                        class="btn btn-ghost btn-xs"
+                        title="Move to Review"
+                      >
+                        <i class="fas fa-check-circle text-purple-500"></i>
+                      </button>
+                    <% end %>
+                    <button
+                      type="button"
+                      onclick="openEditModal(<%= ticket.id %>)"
+                      class="btn btn-ghost btn-xs"
+                      title="Edit"
+                    >
+                      <i class="fas fa-edit text-gray-500"></i>
+                    </button>
+                    <%= link_to llama_bot_rails.ticket_path(ticket), class: "btn btn-ghost btn-xs", title: "View" do %>
+                      <i class="fas fa-eye text-blue-500"></i>
+                    <% end %>
+                    <%= button_to llama_bot_rails.ticket_path(ticket), method: :delete, data: { turbo_confirm: "Delete this ticket?" }, class: "btn btn-ghost btn-xs", title: "Delete" do %>
+                      <i class="fas fa-trash text-red-500"></i>
+                    <% end %>
+                  </div>
+                  <% if ticket.description.present? %>
+                    <p class="text-xs text-gray-600 line-clamp-2"><%= ticket.description %></p>
+                  <% end %>
+                  <div class="flex flex-wrap gap-1 mt-2">
+                    <!-- Project Badge (click to change) -->
+                    <button
+                      type="button"
+                      class="badge badge-xs <%= ticket.project.present? ? 'badge-primary' : 'badge-ghost' %> cursor-pointer hover:opacity-80 project-badge"
+                      onclick="openProjectSelector(event, <%= ticket.id %>, <%= ticket.project_id || 'null' %>);"
+                      data-ticket-id="<%= ticket.id %>"
+                    >
+                      <i class="fas fa-folder text-[8px] mr-1"></i>
+                      <span class="project-badge-text" data-ticket-id="<%= ticket.id %>">
+                        <%= ticket.project&.name || 'No Project' %>
+                      </span>
+                    </button>
+                    <% if ticket.ticket_type.present? %>
+                      <span class="badge badge-xs badge-outline"><%= ticket.ticket_type.titleize %></span>
+                    <% end %>
+                    <% if ticket.agent_result.present? %>
+                      <span class="badge badge-xs <%= ticket.agent_result == 'failed' ? 'badge-error' : 'badge-success' %>">
+                        <%= ticket.agent_result.titleize %>
+                      </span>
+                    <% end %>
+                  </div>
+                </div>
+              <% end %>
+
+              <!-- Empty State -->
+              <% if (@tickets[status] || []).empty? %>
+                <div class="empty-state flex items-center justify-center h-32 text-gray-400">
+                  <div class="text-center">
+                    <i class="fas fa-inbox text-2xl mb-2"></i>
+                    <p class="text-xs">Drop tickets here</p>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ticket Edit Modal -->
+  <dialog id="editModal" class="modal">
+    <div class="modal-box w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <h3 class="font-bold text-xl mb-6">
+        <i class="fas fa-edit mr-2 text-blue-600"></i>
+        Edit Ticket
+      </h3>
+
+      <input type="hidden" id="editTicketId">
+
+      <!-- Ticket Form -->
+      <div class="space-y-4 mb-6">
+        <!-- Title -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Title</label>
+          <input
+            id="editTitle"
+            type="text"
+            class="input input-bordered w-full"
+            placeholder="Ticket title..."
+          >
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+          <textarea
+            id="editDescription"
+            class="textarea textarea-bordered w-full h-24"
+            placeholder="Ticket description..."
+          ></textarea>
+        </div>
+
+        <!-- Project -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Project</label>
+          <select id="editProject" class="select select-bordered w-full">
+            <option value="">-- No Project --</option>
+            <% @projects.each do |project| %>
+              <option value="<%= project.id %>"><%= project.name %></option>
+            <% end %>
+          </select>
+        </div>
+
+        <!-- Status -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+          <select id="editStatus" class="select select-bordered w-full">
+            <option value="">-- Select Status --</option>
+            <% LlamaBotRails::Ticket::STATUSES.each do |status| %>
+              <option value="<%= status %>"><%= status.humanize %></option>
+            <% end %>
+          </select>
+        </div>
+
+        <!-- Position -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Position</label>
+          <input
+            id="editPosition"
+            type="number"
+            class="input input-bordered w-full"
+            placeholder="0"
+          >
+        </div>
+
+        <!-- Notes -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+          <textarea
+            id="editNotes"
+            class="textarea textarea-bordered w-full h-20"
+            placeholder="Add notes here..."
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="modal-action gap-2">
+        <button
+          type="button"
+          class="btn btn-ghost btn-sm"
+          onclick="document.getElementById('editModal').close()"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary btn-sm"
+          onclick="saveTicket()"
+        >
+          <i class="fas fa-save mr-2"></i>Save Changes
+        </button>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+      <button>Close</button>
+    </form>
+  </dialog>
+
+  <script>
+    // Toast Manager
+    class ToastManager {
+      constructor() {
+        this.container = document.getElementById('toast-container');
+        this.toasts = new Map();
+      }
+
+      show(message, type = 'success', duration = 4000) {
+        const toastId = `toast-${Date.now()}-${Math.random()}`;
+
+        const iconMap = {
+          success: '<i class="fas fa-check-circle"></i>'
+        };
+
+        const icon = iconMap[type] || iconMap.success;
+
+        // Calculate stack offset based on existing toasts
+        const existingToasts = this.container.children.length;
+        const offset = existingToasts * 8; // 8px offset per toast
+
+        const toastEl = document.createElement('div');
+        toastEl.id = toastId;
+        toastEl.className = `toast toast-${type} rounded-lg px-5 py-4 backdrop-blur-sm text-white flex items-start gap-4 relative overflow-hidden`;
+        toastEl.style.cssText = `position: absolute; top: ${offset}px; right: 0; min-width: 280px; z-index: ${1000 + existingToasts};`;
+        toastEl.innerHTML = `
+          <div class="toast-icon text-lg mt-0.5">
+            ${icon}
+          </div>
+          <div class="flex-1 text-sm font-medium leading-relaxed">
+            ${message}
+          </div>
+          <button onclick="toastManager.dismiss('${toastId}')" class="flex-shrink-0 ml-2 hover:opacity-75 transition-opacity p-1 -mr-2">
+            <i class="fas fa-times text-lg"></i>
+          </button>
+          <div class="toast-progress absolute bottom-0 left-0 h-1 bg-white/30" style="animation-duration: ${duration}ms;"></div>
+        `;
+
+        this.container.appendChild(toastEl);
+        this.toasts.set(toastId, { element: toastEl, timeout: null });
+
+        const timeout = setTimeout(() => this.dismiss(toastId), duration);
+        this.toasts.get(toastId).timeout = timeout;
+
+        return toastId;
+      }
+
+      dismiss(toastId) {
+        const toast = this.toasts.get(toastId);
+        if (!toast) return;
+
+        if (toast.timeout) clearTimeout(toast.timeout);
+
+        toast.element.classList.add('exiting');
+
+        setTimeout(() => {
+          toast.element.remove();
+          this.toasts.delete(toastId);
+          this.repositionToasts();
+        }, 300);
+      }
+
+      repositionToasts() {
+        let index = 0;
+        this.container.querySelectorAll('.toast:not(.exiting)').forEach(el => {
+          el.style.top = `${index * 8}px`;
+          el.style.zIndex = 1000 + index;
+          index++;
+        });
+      }
+    }
+
+    let toastManager = new ToastManager();
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+    let sortableInstances = [];
+    let isInitialized = false;
+
+    function cleanupKanban() {
+      sortableInstances.forEach(instance => {
+        if (instance) instance.destroy();
+      });
+      sortableInstances = [];
+      isInitialized = false;
+    }
+
+    function initKanban() {
+      if (isInitialized) return;
+
+      if (typeof Sortable === 'undefined') {
+        setTimeout(initKanban, 100);
+        return;
+      }
+
+      isInitialized = true;
+      const columns = document.querySelectorAll('.sortable-column');
+
+      columns.forEach((column) => {
+        if (column.__sortableInstance) return;
+
+        const instance = new Sortable(column, {
+          group: { name: 'tickets', pull: true, put: true },
+          animation: 150,
+          ghostClass: 'sortable-ghost',
+          dragClass: 'sortable-drag',
+          forceFallback: false,
+          filter: '.empty-state',
+
+          onEnd: function(event) {
+            const ticketId = event.item.getAttribute('data-ticket-id');
+            let ticketTitle = event.item.querySelector('h3').textContent.trim();
+            // Truncate title for toast
+            if (ticketTitle.length > 30) {
+              ticketTitle = ticketTitle.substring(0, 30) + '...';
+            }
+            const newStatus = event.to.getAttribute('data-status');
+            const newPosition = Array.from(event.to.children).filter(el => el.dataset.ticketId).indexOf(event.item);
+            const statusLabel = newStatus.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+
+            const oldStatus = event.from.getAttribute('data-status');
+            const isColumnChange = oldStatus !== newStatus;
+
+            updateTicketCounts();
+            removeEmptyStates();
+
+            fetch(`<%= llama_bot_rails.tickets_path %>/${ticketId}/move`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+              },
+              body: JSON.stringify({
+                status: newStatus,
+                position: newPosition
+              })
+            })
+            .then(response => response.json())
+            .then(data => {
+              if (!data.success) {
+                console.error('Failed to move ticket:', data.error);
+                location.reload();
+              } else if (isColumnChange) {
+                toastManager.show(
+                  `<strong>${ticketTitle}</strong> → <strong>${statusLabel}</strong>`,
+                  'success',
+                  2000
+                );
+              }
+            })
+            .catch(error => {
+              console.error('Error moving ticket:', error);
+              location.reload();
+            });
+          }
+        });
+        sortableInstances.push(instance);
+      });
+    }
+
+    function updateTicketCounts() {
+      const columns = document.querySelectorAll('.sortable-column');
+      columns.forEach(column => {
+        const status = column.getAttribute('data-status');
+        const ticketCount = Array.from(column.querySelectorAll('.kanban-card'))
+          .filter(card => card.style.display !== 'none').length;
+
+        const countBadge = document.getElementById(`count-${status}`);
+        if (countBadge) {
+          countBadge.textContent = `${ticketCount} ticket${ticketCount !== 1 ? 's' : ''}`;
+        }
+      });
+    }
+
+    function removeEmptyStates() {
+      document.querySelectorAll('.empty-state').forEach(el => el.remove());
+    }
+
+    function openEditModal(ticketId) {
+      fetch(`<%= llama_bot_rails.tickets_path %>/${ticketId}.json`)
+        .then(response => response.json())
+        .then(ticket => {
+          document.getElementById('editTicketId').value = ticket.id;
+          document.getElementById('editTitle').value = ticket.title || '';
+          document.getElementById('editDescription').value = ticket.description || '';
+          document.getElementById('editProject').value = ticket.project_id || '';
+          document.getElementById('editStatus').value = ticket.status || '';
+          document.getElementById('editPosition').value = ticket.position || 0;
+          document.getElementById('editNotes').value = ticket.notes || '';
+
+          document.getElementById('editModal').showModal();
+        })
+        .catch(error => {
+          console.error('Error loading ticket:', error);
+          toastManager.show('Failed to load ticket', 'error', 3000);
+        });
+    }
+
+    function saveTicket() {
+      const ticketId = document.getElementById('editTicketId').value;
+      const title = document.getElementById('editTitle').value;
+      const description = document.getElementById('editDescription').value;
+      const projectId = document.getElementById('editProject').value;
+      const status = document.getElementById('editStatus').value;
+      const position = document.getElementById('editPosition').value;
+      const notes = document.getElementById('editNotes').value;
+
+      if (!status || status.trim() === '') {
+        toastManager.show('Please select a status', 'error', 3000);
+        return;
+      }
+
+      const payload = {
+        ticket: {
+          title,
+          description,
+          project_id: projectId || null,
+          status,
+          notes,
+          position: position || null
+        }
+      };
+
+      fetch(`<%= llama_bot_rails.tickets_path %>/${ticketId}.json`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
+        body: JSON.stringify(payload)
+      })
+      .then(response => {
+        if (!response.ok) {
+          return response.text().then(text => {
+            throw new Error(`Server returned ${response.status}`);
+          });
+        }
+        return response.json();
+      })
+      .then(data => {
+        toastManager.show('Ticket saved successfully!', 'success', 3000);
+        document.getElementById('editModal').close();
+        setTimeout(() => location.reload(), 1000);
+      })
+      .catch(error => {
+        console.error('Error saving ticket:', error);
+        toastManager.show('Failed to save ticket: ' + error.message, 'error', 3000);
+      });
+    }
+
+    // Initialize on page load
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initKanban);
+    } else {
+      initKanban();
+    }
+
+    // Re-initialize on Turbo navigation
+    document.addEventListener('turbo:before-cache', cleanupKanban);
+    document.addEventListener('turbo:load', () => {
+      cleanupKanban();
+      setTimeout(initKanban, 100);
+    });
+
+    // Ticket card click handler for edit modal
+    document.addEventListener('click', function(e) {
+      const card = e.target.closest('.ticket-card');
+      if (card && !e.target.closest('.btn') && !e.target.closest('a') && !e.target.closest('form')) {
+        const ticketId = card.getAttribute('data-ticket-id');
+        openEditModal(ticketId);
+      }
+    });
+
+    // Copy ticket to clipboard as markdown
+    function copyTicketToClipboard(cardElement) {
+      // Helper to unescape literal \n to actual newlines
+      const unescape = (str) => str ? str.replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\'/g, "'") : '';
+
+      const title = cardElement.dataset.ticketTitle || '';
+      const description = cardElement.dataset.ticketDescription || '';
+      const ticketType = cardElement.dataset.ticketType || '';
+      const status = cardElement.dataset.ticketStatus || '';
+      const notes = cardElement.dataset.ticketNotes || '';
+      const agentNotes = cardElement.dataset.ticketAgentNotes || '';
+
+      // Build markdown content
+      let markdown = `# ${unescape(title)}\n\n`;
+
+      if (status) {
+        markdown += `**Status:** ${status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}\n\n`;
+      }
+
+      if (ticketType) {
+        markdown += `**Type:** ${ticketType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}\n\n`;
+      }
+
+      if (description) {
+        markdown += `## Description\n\n${unescape(description)}\n\n`;
+      }
+
+      if (notes) {
+        markdown += `## Notes\n\n${unescape(notes)}\n\n`;
+      }
+
+      if (agentNotes) {
+        markdown += `## Agent Notes\n\n${unescape(agentNotes)}\n\n`;
+      }
+
+      // Use textarea fallback approach (works in iframes)
+      const textarea = document.createElement('textarea');
+      textarea.value = markdown;
+      textarea.style.position = 'fixed';
+      textarea.style.top = '0';
+      textarea.style.left = '0';
+      textarea.style.width = '2em';
+      textarea.style.height = '2em';
+      textarea.style.padding = '0';
+      textarea.style.border = 'none';
+      textarea.style.outline = 'none';
+      textarea.style.boxShadow = 'none';
+      textarea.style.background = 'transparent';
+      textarea.style.opacity = '0';
+
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+
+      let success = false;
+      try {
+        success = document.execCommand('copy');
+      } catch (err) {
+        console.error('Copy failed:', err);
+      }
+
+      document.body.removeChild(textarea);
+
+      // Show feedback
+      const copyBtn = cardElement.querySelector('.copy-ticket-btn');
+      if (copyBtn) {
+        const icon = copyBtn.querySelector('i');
+        if (success) {
+          icon.className = 'fas fa-check text-green-600';
+          toastManager.show(`Copied "${title}" to clipboard`, 'success', 2000);
+        } else {
+          icon.className = 'fas fa-times text-red-600';
+          toastManager.show('Copy failed - try again', 'error', 2000);
+        }
+
+        setTimeout(() => {
+          icon.className = 'fas fa-copy text-green-600';
+        }, 2000);
+      }
+    }
+
+    // Move ticket to Review status
+    function moveToReview(ticketId, ticketTitle) {
+      fetch(`<%= llama_bot_rails.tickets_path %>/${ticketId}/move`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
+        body: JSON.stringify({
+          status: 'review',
+          position: 0
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          toastManager.show(`<strong>${ticketTitle}</strong> moved to <strong>Review</strong>`, 'success', 3000);
+          setTimeout(() => location.reload(), 1000);
+        } else {
+          toastManager.show('Failed to move ticket: ' + (data.error || 'Unknown error'), 'error', 3000);
+        }
+      })
+      .catch(error => {
+        console.error('Error moving ticket:', error);
+        toastManager.show('Failed to move ticket', 'error', 3000);
+      });
+    }
+
+    // Project filter
+    function filterByProject(projectId) {
+      const url = new URL(window.location.href);
+      if (projectId) {
+        url.searchParams.set('project_id', projectId);
+      } else {
+        url.searchParams.delete('project_id');
+      }
+      window.location.href = url.toString();
+    }
+
+    // --- Search + Date Range filtering (client-side) ---
+    function applyTicketFilters() {
+      const query = (document.getElementById('ticket-search')?.value || '').trim().toLowerCase();
+      const startVal = document.getElementById('filter-date-start')?.value;
+      const endVal = document.getElementById('filter-date-end')?.value;
+      const start = startVal ? new Date(startVal + 'T00:00:00') : null;
+      const end = endVal ? new Date(endVal + 'T23:59:59.999') : null;
+
+      let visibleCount = 0;
+      document.querySelectorAll('.kanban-card').forEach(card => {
+        const title = (card.dataset.ticketTitle || '').toLowerCase();
+        const description = (card.dataset.ticketDescription || '').toLowerCase();
+        const created = card.dataset.ticketCreated ? new Date(card.dataset.ticketCreated) : null;
+
+        let visible = true;
+        if (query) {
+          visible = title.includes(query) || description.includes(query);
+        }
+        if (visible && start && created) visible = created >= start;
+        if (visible && end && created) visible = created <= end;
+
+        card.style.display = visible ? '' : 'none';
+        if (visible) visibleCount++;
+      });
+
+      updateTicketCounts();
+      updateDateRangeLabel();
+
+      const countEl = document.getElementById('filter-result-count');
+      if (countEl) {
+        const filtering = query || start || end;
+        countEl.textContent = filtering ? `${visibleCount} matching ticket${visibleCount !== 1 ? 's' : ''}` : '';
+      }
+    }
+
+    // Date-range popover: label, toggle, outside-click close
+    function updateDateRangeLabel() {
+      const s = document.getElementById('filter-date-start')?.value;
+      const e = document.getElementById('filter-date-end')?.value;
+      const label = document.getElementById('date-range-label');
+      const btn = document.getElementById('date-range-btn');
+      if (!label) return;
+      if (s && e) label.textContent = `${s} → ${e}`;
+      else if (s) label.textContent = `From ${s}`;
+      else if (e) label.textContent = `Until ${e}`;
+      else label.textContent = 'Any date';
+      if (btn) btn.classList.toggle('btn-active', !!(s || e));
+    }
+
+    function toggleDateRange(event) {
+      if (event) event.stopPropagation();
+      document.getElementById('date-range-panel')?.classList.toggle('hidden');
+    }
+
+    document.addEventListener('click', (e) => {
+      const panel = document.getElementById('date-range-panel');
+      if (!panel || panel.classList.contains('hidden')) return;
+      if (!panel.contains(e.target) && !e.target.closest('#date-range-btn')) {
+        panel.classList.add('hidden');
+      }
+    });
+
+    function clearTicketFilters() {
+      const search = document.getElementById('ticket-search');
+      const startEl = document.getElementById('filter-date-start');
+      const endEl = document.getElementById('filter-date-end');
+      if (search) search.value = '';
+      if (startEl) startEl.value = '';
+      if (endEl) endEl.value = '';
+      applyTicketFilters();
+    }
+
+    // --- Copy just the ticket title to the clipboard ---
+    function copyTextToClipboard(text) {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.top = '0';
+      textarea.style.left = '0';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      let success = false;
+      try {
+        success = document.execCommand('copy');
+      } catch (err) {
+        console.error('Copy failed:', err);
+      }
+      document.body.removeChild(textarea);
+      return success;
+    }
+
+    function copyTitleToClipboard(btn) {
+      const card = btn.closest('.kanban-card') || btn.closest('.timeline-ticket');
+      if (!card) return;
+      const unescape = (str) => str ? str.replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\'/g, "'").replace(/\\"/g, '"') : '';
+      const title = unescape(card.dataset.ticketTitle || '');
+
+      const success = copyTextToClipboard(title);
+      const icon = btn.querySelector('i');
+      if (icon) {
+        if (success) {
+          icon.className = 'fas fa-check text-green-600 text-xs';
+          toastManager.show(`Copied title to clipboard`, 'success', 2000);
+        } else {
+          icon.className = 'fas fa-times text-red-600 text-xs';
+          toastManager.show('Copy failed - try again', 'error', 2000);
+        }
+        setTimeout(() => { icon.className = 'fas fa-copy text-gray-400 text-xs'; }, 2000);
+      }
+    }
+
+    // Tooltip
+    const tooltip = document.getElementById('ticket-tooltip');
+    document.addEventListener('mouseover', (e) => {
+      const card = e.target.closest('.ticket-card[data-tooltip]');
+      if (card) {
+        const text = card.dataset.tooltip;
+        const rect = card.getBoundingClientRect();
+        tooltip.textContent = text;
+        tooltip.style.width = `${rect.width}px`;
+        tooltip.style.left = `${rect.left}px`;
+        tooltip.style.display = 'block';
+        tooltip.style.top = `${rect.top - tooltip.offsetHeight - 8}px`;
+      }
+    });
+    document.addEventListener('mouseout', (e) => {
+      const card = e.target.closest('.ticket-card[data-tooltip]');
+      if (card) {
+        tooltip.style.display = 'none';
+      }
+    });
+
+    // Project selector state
+    let currentProjectTicketId = null;
+    const projectSelector = document.getElementById('project-selector');
+
+    function openProjectSelector(event, ticketId, currentProjectId) {
+      event.stopPropagation();
+      currentProjectTicketId = ticketId;
+
+      // Position the dropdown near the clicked badge
+      const rect = event.target.getBoundingClientRect();
+      projectSelector.style.top = `${rect.bottom + 4}px`;
+      projectSelector.style.left = `${rect.left}px`;
+
+      // Highlight current selection
+      projectSelector.querySelectorAll('.project-option').forEach(opt => {
+        const optProjectId = opt.dataset.projectId;
+        if ((optProjectId === '' && currentProjectId === null) || optProjectId == currentProjectId) {
+          opt.classList.add('bg-blue-50', 'text-blue-700');
+        } else {
+          opt.classList.remove('bg-blue-50', 'text-blue-700');
+        }
+      });
+
+      projectSelector.classList.remove('hidden');
+
+      // Adjust if it goes off-screen
+      const selectorRect = projectSelector.getBoundingClientRect();
+      if (selectorRect.right > window.innerWidth) {
+        projectSelector.style.left = `${window.innerWidth - selectorRect.width - 10}px`;
+      }
+      if (selectorRect.bottom > window.innerHeight) {
+        projectSelector.style.top = `${rect.top - selectorRect.height - 4}px`;
+      }
+    }
+
+    function closeProjectSelector() {
+      projectSelector.classList.add('hidden');
+      currentProjectTicketId = null;
+    }
+
+    // Close selector when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!projectSelector.contains(e.target) && !e.target.closest('.project-badge')) {
+        closeProjectSelector();
+      }
+    });
+
+    // Handle project option clicks
+    projectSelector.addEventListener('click', (e) => {
+      const option = e.target.closest('.project-option');
+      if (option && currentProjectTicketId) {
+        const projectId = option.dataset.projectId || null;
+        const projectName = option.dataset.projectName;
+        changeTicketProject(currentProjectTicketId, projectId, projectName);
+        closeProjectSelector();
+      }
+    });
+
+    // Change ticket project inline
+    function changeTicketProject(ticketId, projectId, projectName) {
+      fetch(`<%= llama_bot_rails.tickets_path %>/${ticketId}.json`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
+        body: JSON.stringify({
+          ticket: { project_id: projectId }
+        })
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`Server returned ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        // Update the badge text on the card
+        const badgeText = document.querySelector(`.project-badge-text[data-ticket-id="${ticketId}"]`);
+        if (badgeText) {
+          badgeText.textContent = projectName;
+          // Update badge styling
+          const badge = badgeText.closest('.project-badge');
+          if (badge) {
+            if (projectId) {
+              badge.classList.remove('badge-ghost');
+              badge.classList.add('badge-primary');
+            } else {
+              badge.classList.remove('badge-primary');
+              badge.classList.add('badge-ghost');
+            }
+          }
+        }
+        toastManager.show(`Project changed to <strong>${projectName}</strong>`, 'success', 2000);
+      })
+      .catch(error => {
+        console.error('Error changing project:', error);
+        toastManager.show('Failed to change project: ' + error.message, 'error', 3000);
+      });
+    }
+  </script>
+</body>
+</html>

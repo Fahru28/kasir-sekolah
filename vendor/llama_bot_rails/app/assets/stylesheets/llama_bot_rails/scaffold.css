@@ -1,0 +1,37 @@
+/* LlamaPress scaffold UI — drawer transitions and small helpers.
+   Utility classes come from the host's Tailwind; this file only holds what
+   utilities can't express (transitions on the shared drawer shell). */
+
+.llama-drawer-panel {
+  transform: translateX(100%);
+  transition: transform 0.25s ease;
+}
+
+.llama-drawer.llama-drawer-open .llama-drawer-panel {
+  transform: translateX(0);
+}
+
+.llama-drawer-backdrop {
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.llama-drawer.llama-drawer-open .llama-drawer-backdrop {
+  opacity: 1;
+}
+
+/* Whole-row click affordance on scaffold index tables. */
+[data-drawer-row] {
+  cursor: pointer;
+}
+
+/* Filter bar chevron — rotates to point up while the panel is open. The
+   layout pins Tailwind v2, whose transform utilities need an explicit
+   `transform` class, so the rotation is expressed here instead. */
+.llama-filter-chevron {
+  transition: transform 0.2s ease;
+}
+
+.llama-filter-chevron.llama-filter-chevron-open {
+  transform: rotate(180deg);
+}

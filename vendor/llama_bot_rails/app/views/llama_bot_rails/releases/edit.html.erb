@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html data-theme="light">
+<head>
+  <title><%= request.host %> | Edit <%= @release.version %></title>
+  <%= render "head" %>
+</head>
+<body class="bg-base-200 min-h-screen">
+  <div class="max-w-2xl mx-auto px-4 py-8">
+    <%= link_to release_path(@release), class: "btn btn-ghost btn-sm mb-4" do %>
+      <i class="fas fa-arrow-left mr-1"></i> Back
+    <% end %>
+    <h1 class="text-2xl font-bold mb-6">Edit Release <span class="font-mono"><%= @release.version %></span></h1>
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+      <div class="card-body">
+        <%= render "form", release: @release %>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

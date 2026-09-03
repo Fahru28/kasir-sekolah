@@ -1,0 +1,127 @@
+<div class="bg-gradient-to-br from-primary to-indigo-600 text-white">
+  <div class="max-w-7xl mx-auto px-6 py-8">
+    <p class="text-white/70 text-sm mb-1"><i class="fa-solid fa-store mr-1"></i> Koperasi Sekolah</p>
+    <h1 class="text-3xl font-bold">Dashboard Kasir</h1>
+    <p class="text-white/70 mt-1">Ringkasan penjualan & stok hari ini — <%= l(Date.current, format: :long) rescue Date.current.to_s %></p>
+  </div>
+</div>
+
+<div class="max-w-7xl mx-auto px-6 -mt-4">
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="card bg-base-100 shadow-xl border border-base-200">
+      <div class="card-body p-5">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-sm text-base-content/60">Penjualan Hari Ini</p>
+            <p class="text-2xl font-bold mt-1"><%= rupiah(@total_sales_today) %></p>
+            <p class="text-xs text-base-content/50 mt-1"><%= @tx_count_today %> transaksi</p>
+          </div>
+          <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary"><i class="fa-solid fa-coins"></i></div>
+        </div>
+      </div>
+    </div>
+    <div class="card bg-base-100 shadow-xl border border-base-200">
+      <div class="card-body p-5">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-sm text-base-content/60">Keuntungan Hari Ini</p>
+            <p class="text-2xl font-bold mt-1 text-success"><%= rupiah(@profit_today) %></p>
+          </div>
+          <div class="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center text-success"><i class="fa-solid fa-arrow-trend-up"></i></div>
+        </div>
+      </div>
+    </div>
+    <div class="card bg-base-100 shadow-xl border border-base-200">
+      <div class="card-body p-5">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-sm text-base-content/60">Piutang Berjalan</p>
+            <p class="text-2xl font-bold mt-1 <%= @total_piutang > 0 ? 'text-warning' : '' %>"><%= rupiah(@total_piutang) %></p>
+            <a href="/piutang" class="text-xs link link-primary">Lihat piutang →</a>
+          </div>
+          <div class="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center text-warning"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+        </div>
+      </div>
+    </div>
+    <div class="card bg-base-100 shadow-xl border <%= @low_stock.any? ? 'border-warning' : 'border-base-200' %>">
+      <div class="card-body p-5">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-sm text-base-content/60">Stok Menipis</p>
+            <p class="text-2xl font-bold mt-1 <%= @low_stock.any? ? 'text-error' : '' %>"><%= @low_stock.size %> barang</p>
+            <% if @low_stock.any? %>
+              <p class="text-xs text-base-content/60"><%= @low_stock.map(&:name).first(2).join(", ") %></p>
+            <% else %>
+              <p class="text-xs text-success">Semua aman</p>
+            <% end %>
+          </div>
+          <div class="w-10 h-10 rounded-xl bg-error/10 flex items-center justify-center text-error"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+    <div class="lg:col-span-2">
+      <div class="card bg-base-100 shadow border border-base-200">
+        <div class="card-body">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="font-bold text-lg"><i class="fa-solid fa-clock-rotate-left mr-2 text-primary"></i>Transaksi Terbaru</h2>
+            <a href="/sales" class="btn btn-sm btn-ghost">Lihat semua</a>
+          </div>
+          <% if @recent_sales.any? %>
+            <div class="overflow-x-auto">
+              <table class="table table-sm">
+                <thead><tr><th>No</th><th>Tanggal</th><th>Siswa</th><th>Total</th><th>Status</th></tr></thead>
+                <tbody>
+                  <% @recent_sales.each do |s| %>
+                    <tr class="hover">
+                      <td><a href="/sales/<%= s.id %>" class="link link-primary font-mono text-xs"><%= s.number %></a></td>
+                      <td class="text-sm"><%= s.sale_date %></td>
+                      <td class="text-sm"><%= s.student.name %><br><span class="text-xs opacity-60"><%= s.student.class_name %></span></td>
+                      <td class="font-semibold text-sm"><%= rupiah(s.total_amount) %></td>
+                      <td><span class="badge badge-sm <%= s.status == 'Lunas' ? 'badge-success' : 'badge-warning' %>"><%= s.status %></span></td>
+                    </tr>
+                  <% end %>
+                </tbody>
+              </table>
+            </div>
+          <% else %>
+            <p class="text-sm opacity-60">Belum ada transaksi</p>
+          <% end %>
+          <div class="mt-4 grid grid-cols-2 gap-2">
+            <a href="/kasir" class="btn btn-primary gap-2"><i class="fa-solid fa-cash-register"></i> Buka Kasir</a>
+            <a href="/laporan" class="btn btn-outline gap-2"><i class="fa-solid fa-chart-column"></i> Laporan Harian</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card bg-base-100 shadow border border-base-200">
+        <div class="card-body">
+          <h2 class="font-bold mb-3"><i class="fa-solid fa-boxes-stacked mr-2 text-primary"></i>Stok Menipis</h2>
+          <% if @low_stock.any? %>
+            <div class="space-y-2">
+              <% @low_stock.each do |p| %>
+                <div class="flex justify-between items-center p-3 rounded-xl bg-warning/10 border border-warning/20">
+                  <div>
+                    <p class="font-medium text-sm"><%= p.name %></p>
+                    <p class="text-xs opacity-60"><%= p.code %> · <%= p.category %></p>
+                  </div>
+                  <span class="badge badge-warning badge-sm"><%= p.current_stock %> / <%= p.min_stock %></span>
+                </div>
+              <% end %>
+            </div>
+          <% else %>
+            <div class="text-center py-8">
+              <div class="w-12 h-12 rounded-full bg-success/10 flex items-center justify-center mx-auto text-success mb-2"><i class="fa-solid fa-check"></i></div>
+              <p class="text-sm opacity-60">Semua stok aman</p>
+            </div>
+          <% end %>
+          <a href="/products" class="btn btn-sm btn-outline mt-4 w-full">Kelola barang</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

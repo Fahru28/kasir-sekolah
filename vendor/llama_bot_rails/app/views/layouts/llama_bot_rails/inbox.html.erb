@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html data-theme="light">
+<head>
+  <title><%= content_for?(:title) ? yield(:title) : "Inbox - LlamaBotRails" %></title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <%= csrf_meta_tags %>
+
+  <%# Page specific CSS, JS and meta tags. Each Inbox view supplies its own by
+      wrapping them in a content_for :head block. (Do not write that block's ERB
+      tags inside this comment — an inner closing tag would end it early.) %>
+  <%= yield :head %>
+</head>
+<body>
+  <%= render "llama_bot_rails/shared/inbox_nav" %>
+
+  <%= yield %>
+
+  <%# Publishes the unread-message count to the chat UI's Inbox tab badge.
+      It lives in the layout rather than on the conversation pages alone
+      because the chat UI now has one Inbox frame instead of a permanently
+      loaded Messages frame — whichever Inbox page is open has to keep the
+      badge current, or it goes stale the moment you navigate off Messages. %>
+  <%= render "llama_bot_rails/shared/parent_unread_bridge" %>
+</body>
+</html>

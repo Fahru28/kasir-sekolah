@@ -1,0 +1,123 @@
+<div class="max-w-7xl mx-auto px-4 py-6">
+  <div class="flex flex-wrap justify-between items-center gap-3 mb-6">
+    <div>
+      <h1 class="text-2xl font-bold flex items-center gap-2"><span class="w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-white"><i class="fa-solid fa-cash-register text-sm"></i></span> Kasir</h1>
+      <p class="text-sm opacity-60 mt-1">Pilih siswa → tambah barang → bayar. No: <span class="font-mono font-semibold"><%= "TRX-#{Date.current.strftime('%Y%m%d')}-XXX" %></span></p>
+    </div>
+    <a href="/dashboard" class="btn btn-sm btn-ghost gap-1"><i class="fa-solid fa-arrow-left"></i> Dashboard</a>
+  </div>
+
+  <% if flash[:alert] %>
+    <div class="alert alert-error mb-4"><i class="fa-solid fa-circle-exclamation"></i> <%= flash[:alert] %></div>
+  <% end %>
+  <% if flash[:notice] %>
+    <div class="alert alert-success mb-4"><i class="fa-solid fa-check"></i> <%= flash[:notice] %></div>
+  <% end %>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Cart -->
+    <div class="lg:col-span-2 space-y-4">
+      <div class="card bg-base-100 shadow border border-base-200">
+        <div class="card-body p-4">
+          <h2 class="font-bold flex items-center gap-2"><i class="fa-solid fa-cart-shopping text-primary"></i> Keranjang</h2>
+          <% cart = session[:kasir_cart] || [] %>
+          <% if cart.empty? %>
+            <div class="text-center py-10 border-2 border-dashed rounded-xl mt-3">
+              <i class="fa-solid fa-basket-shopping text-3xl opacity-20"></i>
+              <p class="text-sm opacity-60 mt-2">Belum ada barang. Tambahkan dari panel kanan.</p>
+            </div>
+          <% else %>
+            <div class="overflow-x-auto mt-3">
+              <table class="table table-sm">
+                <thead><tr><th>Barang</th><th>Harga</th><th>Qty</th><th>Subtotal</th><th></th></tr></thead>
+                <tbody>
+                  <% cart.each do |item| %>
+                    <tr>
+                      <td><span class="font-medium text-sm"><%= item["name"] %></span><br><span class="text-xs opacity-50 font-mono"><%= item["code"] %></span></td>
+                      <td class="text-sm"><%= rupiah(item["price"]) %></td>
+                      <td><span class="badge badge-ghost"><%= item["qty"] %></span></td>
+                      <td class="font-semibold text-sm"><%= rupiah(item["price"].to_i * item["qty"].to_i) %></td>
+                      <td>
+                        <%= button_to kasir_remove_item_path(product_id: item["product_id"]), method: :post, class: "btn btn-ghost btn-xs text-error" do %>
+                          <i class="fa-solid fa-xmark"></i>
+                        <% end %>
+                      </td>
+                    </tr>
+                  <% end %>
+                </tbody>
+              </table>
+            </div>
+            <div class="flex justify-end mt-2">
+              <%= button_to kasir_clear_cart_path, method: :post, class: "btn btn-ghost btn-sm text-error gap-1" do %><i class="fa-solid fa-trash"></i> Kosongkan<% end %>
+            </div>
+          <% end %>
+
+          <% cart_total = cart.sum { |i| i["price"].to_i * i["qty"].to_i } %>
+          <div class="bg-base-200 rounded-xl p-4 mt-4 flex justify-between items-center">
+            <span class="font-bold">Total</span>
+            <span class="text-2xl font-black text-primary"><%= rupiah(cart_total) %></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Checkout -->
+      <div class="card bg-base-100 shadow border border-primary/20">
+        <div class="card-body p-4">
+          <h2 class="font-bold"><i class="fa-solid fa-credit-card text-primary mr-1"></i> Pembayaran</h2>
+          <%= form_with url: kasir_checkout_path, method: :post, class: "space-y-3 mt-3" do |f| %>
+            <div>
+              <label class="label"><span class="label-text font-medium">Siswa</span></label>
+              <select name="student_id" required class="select select-bordered w-full">
+                <option value="">— Pilih siswa —</option>
+                <% @students.each do |s| %>
+                  <option value="<%= s.id %>"><%= s.name %> — <%= s.class_name %> (<%= s.code %>)</option>
+                <% end %>
+              </select>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="label"><span class="label-text font-medium">Metode</span></label>
+                <select name="payment_method" id="payment_method" class="select select-bordered w-full" onchange="document.getElementById('tunai-field').style.display = this.value==='Tunai' ? 'block':'none'">
+                  <option value="Tunai">Tunai</option>
+                  <option value="Transfer">Transfer</option>
+                  <option value="QRIS">QRIS</option>
+                  <option value="Piutang">Piutang (hutang)</option>
+                </select>
+              </div>
+              <div id="tunai-field">
+                <label class="label"><span class="label-text font-medium">Nominal bayar</span></label>
+                <input type="number" name="amount_paid" placeholder="15000" class="input input-bordered w-full" />
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block btn-lg gap-2 shadow-lg"><i class="fa-solid fa-check"></i> Proses Bayar</button>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Product picker -->
+    <div>
+      <div class="card bg-base-100 shadow border border-base-200 sticky top-20">
+        <div class="card-body p-4">
+          <h2 class="font-bold"><i class="fa-solid fa-box-open text-primary mr-1"></i> Tambah Barang</h2>
+          <p class="text-xs opacity-60">Klik + untuk masuk keranjang</p>
+          <div class="space-y-2 mt-3 max-h-[60vh] overflow-auto pr-1">
+            <% @products.each do |p| %>
+              <div class="flex items-center gap-3 p-3 rounded-xl border <%= p.low_stock? ? 'border-warning bg-warning/5' : 'border-base-200' %> hover:shadow-sm transition">
+                <div class="flex-1 min-w-0">
+                  <p class="font-medium text-sm truncate"><%= p.name %></p>
+                  <p class="text-xs opacity-60"><%= p.code %> · <%= rupiah(p.selling_price) %> · Stok: <%= p.current_stock %></p>
+                </div>
+                <%= form_with url: kasir_add_item_path, method: :post, class: "flex items-center gap-1" do %>
+                  <input type="hidden" name="product_id" value="<%= p.id %>" />
+                  <input type="number" name="qty" value="1" min="1" class="input input-bordered input-xs w-14 text-center" />
+                  <button type="submit" class="btn btn-primary btn-xs btn-circle"><i class="fa-solid fa-plus text-[10px]"></i></button>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

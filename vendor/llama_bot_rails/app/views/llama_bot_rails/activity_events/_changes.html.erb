@@ -1,0 +1,20 @@
+<%# Field-level diff for one PaperTrail version. %>
+<% changes = llama_activity_changes(version) %>
+<% if changes.empty? %>
+  <p class="text-sm text-gray-400 italic">No field-level detail recorded.</p>
+<% else %>
+  <div class="space-y-2">
+    <% changes.each do |attribute, from, to| %>
+      <div class="text-sm">
+        <div class="font-mono text-xs text-gray-500"><%= attribute %></div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-gray-500 line-through"><%= llama_activity_value(from) %></span>
+          <%# A character, not a FontAwesome icon: this partial also renders
+              inside host app pages, which do not load FontAwesome. %>
+          <span class="text-gray-400" aria-hidden="true">&rarr;</span>
+          <span class="font-medium"><%= llama_activity_value(to) %></span>
+        </div>
+      </div>
+    <% end %>
+  </div>
+<% end %>

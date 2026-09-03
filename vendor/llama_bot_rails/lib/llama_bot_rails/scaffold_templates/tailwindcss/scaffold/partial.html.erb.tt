@@ -1,0 +1,41 @@
+<%
+  table_cols = LlamaBotRails::ScaffoldColumns.table_columns(attributes)
+  with_created_at = LlamaBotRails::ScaffoldColumns.created_at_column?(attributes)
+  primary = table_cols.first
+  cell_expression = lambda do |attribute|
+    reader = "#{singular_name}.#{attribute.column_name}"
+    case attribute.type&.to_sym
+    when :boolean then "#{reader} ? \"Yes\" : \"No\""
+    when :date, :datetime then "#{reader}&.strftime(\"%b %-d, %Y\")"
+    when :time then "#{reader}&.strftime(\"%H:%M\")"
+    else reader
+    end
+  end
+-%>
+<%# Index table row. Fields not selected as table columns appear in the detail drawer instead. -%>
+<tr id="<%%= dom_id <%= singular_name %> %>" data-drawer-row class="hover:bg-gray-50">
+<% if primary -%>
+  <td class="px-4 py-3 text-sm font-medium text-gray-900">
+    <%%= link_to (<%= cell_expression.call(primary) %>).presence || "<%= human_name %> ##{<%= singular_name %>.id}", <%= model_resource_name(singular_name) %>,
+          data: { turbo_frame: "record_drawer" },
+          class: "text-blue-600 hover:underline" %>
+  </td>
+<% else -%>
+  <td class="px-4 py-3 text-sm font-medium text-gray-900">
+    <%%= link_to "<%= human_name %> ##{<%= singular_name %>.id}", <%= model_resource_name(singular_name) %>,
+          data: { turbo_frame: "record_drawer" },
+          class: "text-blue-600 hover:underline" %>
+  </td>
+<% end -%>
+<% table_cols.drop(1).each_with_index do |attribute, i| -%>
+  <td class="px-4 py-3 text-sm text-gray-600<%= " hidden md:table-cell" if i + 1 >= 2 %>"><%%= <%= cell_expression.call(attribute) %> %></td>
+<% end -%>
+<% if with_created_at -%>
+  <td class="px-4 py-3 text-sm text-gray-500 hidden md:table-cell"><%%= <%= singular_name %>.created_at&.strftime("%b %-d, %Y") %></td>
+<% end -%>
+  <td class="px-4 py-3 text-right text-sm">
+    <%%= link_to "Edit", edit_<%= singular_route_name %>_path(<%= singular_name %>),
+          data: { turbo_frame: "record_drawer" },
+          class: "text-blue-600 hover:underline" %>
+  </td>
+</tr>

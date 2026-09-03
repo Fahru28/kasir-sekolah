@@ -1,0 +1,208 @@
+<div class="bg-gray-50 rounded-lg p-4 <%= comment.is_admin_response ? 'border-l-4 border-blue-500' : '' %>" id="comment-<%= comment.id %>">
+  <div class="flex items-start justify-between mb-2">
+    <div>
+      <span class="font-semibold text-gray-800"><%= comment.display_author %></span>
+      <% if comment.is_admin_response %>
+        <span class="badge badge-sm badge-primary ml-2">Staff</span>
+      <% end %>
+      <span class="text-xs text-gray-500 ml-2"><%= time_ago_in_words(comment.created_at) %> ago</span>
+      <% if comment.edited? %>
+        <span class="text-xs text-gray-400 ml-1" title="Edited <%= time_ago_in_words(comment.updated_at) %> ago">(edited)</span>
+      <% end %>
+    </div>
+    <div class="flex items-center gap-2">
+      <% if current_llama_user %>
+        <button type="button" class="btn btn-ghost btn-xs" onclick="toggleReplyForm(<%= comment.id %>)">
+          <i class="fas fa-reply"></i> Reply
+        </button>
+      <% end %>
+      <% if comment.editable_by?(current_llama_user) %>
+        <button type="button" class="btn btn-ghost btn-xs" onclick="toggleEditForm(<%= comment.id %>)" title="Edit comment">
+          <i class="fas fa-pen"></i>
+        </button>
+      <% end %>
+      <% if can?(:moderate_feedback) || comment.user_id == current_llama_user&.id %>
+        <%= button_to user_feedback_comment_path(feedback, comment), method: :delete, class: "btn btn-ghost btn-xs text-red-500", data: { turbo_confirm: "Delete this comment?" } do %>
+          <i class="fas fa-trash"></i>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+  <div id="comment-body-<%= comment.id %>">
+    <p class="text-gray-700 whitespace-pre-wrap"><%= highlight_mentions(comment.body) %></p>
+  </div>
+
+  <!-- Edit Form (hidden by default) -->
+  <% if comment.editable_by?(current_llama_user) %>
+    <div id="edit-form-<%= comment.id %>" class="hidden">
+      <%= form_with model: comment, url: user_feedback_comment_path(feedback, comment), method: :patch, class: "mt-1", multipart: true do |f| %>
+        <%= f.text_area :body, class: "textarea textarea-bordered w-full text-sm", rows: 3, id: "edit-body-#{comment.id}" %>
+        <div class="flex items-center gap-2 mt-2">
+          <button type="submit" class="btn btn-primary btn-xs">
+            <i class="fas fa-check"></i> Save
+          </button>
+          <button type="button" class="btn btn-ghost btn-xs" onclick="toggleEditForm(<%= comment.id %>)">
+            Cancel
+          </button>
+          <label class="flex items-center gap-1 cursor-pointer text-xs text-gray-600 hover:text-gray-800 ml-auto">
+            <i class="fas fa-paperclip"></i>
+            <span>Add files</span>
+            <%= f.file_field :attachments, multiple: true, class: "hidden", id: "edit-attachments-#{comment.id}", data: { preview_target: "edit-attachment-preview-#{comment.id}" }, onchange: "mergePickedAttachments(this)" %>
+          </label>
+        </div>
+        <div id="edit-attachment-preview-<%= comment.id %>" class="mt-2 flex flex-wrap gap-2"></div>
+      <% end %>
+    </div>
+  <% end %>
+
+  <!-- Comment Attachments -->
+  <% if comment.attachments.any? %>
+    <div class="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2">
+      <% comment.attachments.each do |attachment| %>
+        <div class="bg-gray-200 rounded-lg p-2 text-center relative group">
+          <% if attachment.image? %>
+            <div class="cursor-zoom-in" onclick="openImageModal('<%= main_app.rails_blob_path(attachment, disposition: 'inline') %>', '<%= j attachment.filename.to_s %>')" title="Click to enlarge">
+              <%= image_tag main_app.rails_blob_path(attachment, disposition: 'inline'), class: "w-full h-28 object-contain rounded mb-1 bg-white hover:opacity-90 transition-opacity", alt: attachment.filename.to_s, loading: "lazy" %>
+            </div>
+          <% elsif attachment.video? %>
+            <div class="relative cursor-pointer" onclick="openVideoModal('<%= main_app.rails_blob_path(attachment, disposition: 'inline') %>', '<%= attachment.content_type %>')">
+              <video class="w-full h-28 rounded mb-1 object-cover bg-black" preload="metadata" muted>
+                <source src="<%= main_app.rails_blob_path(attachment, disposition: 'inline') %>" type="<%= attachment.content_type %>">
+              </video>
+              <div class="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors rounded">
+                <i class="fas fa-play-circle text-white text-xl"></i>
+              </div>
+            </div>
+          <% else %>
+            <div class="w-full h-28 flex items-center justify-center mb-1">
+              <i class="fas <%= attachment_icon(attachment.content_type) %> text-2xl text-gray-400"></i>
+            </div>
+          <% end %>
+
+          <p class="text-xs text-gray-600 truncate" title="<%= attachment.filename %>"><%= attachment.filename %></p>
+          <div class="flex justify-center gap-1 mt-1">
+            <!-- Download Button -->
+            <%= link_to main_app.rails_blob_path(attachment, disposition: 'attachment'), class: "btn btn-ghost btn-xs" do %>
+              <i class="fas fa-download text-xs"></i>
+            <% end %>
+
+            <!-- Delete Button (owner or moderator) -->
+            <% if can?(:moderate_feedback) || comment.user_id == current_llama_user&.id %>
+              <%= button_to remove_attachment_user_feedback_comment_path(feedback, comment, attachment_id: attachment.id), method: :delete, class: "btn btn-ghost btn-xs text-red-500", data: { turbo_confirm: "Remove this attachment?" } do %>
+                <i class="fas fa-trash text-xs"></i>
+              <% end %>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+
+  <!-- Reply Form (hidden by default) -->
+  <% if current_llama_user %>
+    <div id="reply-form-<%= comment.id %>" class="mt-3 hidden">
+      <%= form_with model: LlamaBotRails::FeedbackComment.new, url: user_feedback_comments_path(feedback), class: "flex gap-2", multipart: true do |f| %>
+        <%= f.hidden_field :parent_id, value: comment.id %>
+        <div class="flex-1 relative">
+          <%= f.text_area :body, placeholder: "Write a reply... (use @ to mention users)", class: "textarea textarea-bordered textarea-sm w-full mention-textarea", rows: 2, id: "reply-body-#{comment.id}" %>
+          <div id="reply-mention-dropdown-<%= comment.id %>" class="mention-dropdown hidden absolute z-50 bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[220px] max-h-[200px] overflow-y-auto"></div>
+          <div id="reply-mentioned-ids-<%= comment.id %>"></div>
+
+          <!-- File Attachment Input for Reply -->
+          <div class="mt-2">
+            <label class="flex items-center gap-2 cursor-pointer text-xs text-gray-600 hover:text-gray-800">
+              <i class="fas fa-paperclip"></i>
+              <span>Attach files</span>
+              <%= f.file_field :attachments, multiple: true, class: "hidden", id: "reply-attachments-#{comment.id}", data: { preview_target: "reply-attachment-preview-#{comment.id}" }, onchange: "mergePickedAttachments(this)" %>
+            </label>
+            <div id="reply-attachment-preview-<%= comment.id %>" class="mt-2 flex flex-wrap gap-2"></div>
+          </div>
+        </div>
+        <div class="flex flex-col gap-1">
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="fas fa-paper-plane"></i>
+          </button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="toggleReplyForm(<%= comment.id %>)">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+
+  <!-- Nested Replies -->
+  <% if comment.replies.any? && depth < 3 %>
+    <div class="mt-4 ml-4 pl-4 border-l-2 border-gray-200 space-y-3">
+      <% comment.replies.chronological.each do |reply| %>
+        <%= render partial: 'llama_bot_rails/user_feedbacks/comment', locals: { comment: reply, feedback: feedback, depth: depth + 1 } %>
+      <% end %>
+    </div>
+  <% elsif comment.replies.any? %>
+    <div class="mt-4 ml-4 pl-4 border-l-2 border-gray-200 space-y-3">
+      <% comment.replies.chronological.each do |reply| %>
+        <div class="bg-gray-100 rounded-lg p-3 <%= reply.is_admin_response ? 'border-l-4 border-blue-500' : '' %>">
+          <div class="flex items-start justify-between mb-1">
+            <div>
+              <span class="font-semibold text-gray-800 text-sm"><%= reply.display_author %></span>
+              <% if reply.is_admin_response %>
+                <span class="badge badge-xs badge-primary ml-1">Staff</span>
+              <% end %>
+              <span class="text-xs text-gray-500 ml-2"><%= time_ago_in_words(reply.created_at) %> ago</span>
+              <% if reply.edited? %>
+                <span class="text-xs text-gray-400 ml-1">(edited)</span>
+              <% end %>
+            </div>
+            <div class="flex items-center gap-1">
+              <% if reply.editable_by?(current_llama_user) %>
+                <button type="button" class="btn btn-ghost btn-xs" onclick="toggleEditForm(<%= reply.id %>)" title="Edit reply">
+                  <i class="fas fa-pen"></i>
+                </button>
+              <% end %>
+              <% if can?(:moderate_feedback) || reply.user_id == current_llama_user&.id %>
+                <%= button_to user_feedback_comment_path(feedback, reply), method: :delete, class: "btn btn-ghost btn-xs text-red-500", data: { turbo_confirm: "Delete this reply?" } do %>
+                  <i class="fas fa-trash"></i>
+                <% end %>
+              <% end %>
+            </div>
+          </div>
+          <div id="comment-body-<%= reply.id %>">
+            <p class="text-gray-700 text-sm whitespace-pre-wrap"><%= highlight_mentions(reply.body) %></p>
+          </div>
+
+          <% if reply.editable_by?(current_llama_user) %>
+            <div id="edit-form-<%= reply.id %>" class="hidden">
+              <%= form_with model: reply, url: user_feedback_comment_path(feedback, reply), method: :patch, class: "mt-1" do |f| %>
+                <%= f.text_area :body, class: "textarea textarea-bordered w-full text-sm", rows: 2, id: "edit-body-#{reply.id}" %>
+                <div class="flex items-center gap-2 mt-1">
+                  <button type="submit" class="btn btn-primary btn-xs"><i class="fas fa-check"></i> Save</button>
+                  <button type="button" class="btn btn-ghost btn-xs" onclick="toggleEditForm(<%= reply.id %>)">Cancel</button>
+                </div>
+              <% end %>
+            </div>
+          <% end %>
+
+          <!-- Reply Attachments (collapsed view) -->
+          <% if reply.attachments.any? %>
+            <div class="mt-2 grid grid-cols-3 gap-1">
+              <% reply.attachments.each do |attachment| %>
+                <div class="bg-gray-200 rounded p-1 text-center">
+                  <% if attachment.image? %>
+                    <div class="cursor-zoom-in" onclick="openImageModal('<%= main_app.rails_blob_path(attachment, disposition: 'inline') %>', '<%= j attachment.filename.to_s %>')" title="Click to enlarge">
+                      <%= image_tag main_app.rails_blob_path(attachment, disposition: 'inline'), class: "w-full h-20 object-contain rounded bg-white", alt: attachment.filename.to_s, loading: "lazy" %>
+                      <p class="text-[10px] text-gray-600 truncate mt-0.5"><%= attachment.filename %></p>
+                    </div>
+                  <% else %>
+                    <%= link_to main_app.rails_blob_path(attachment, disposition: 'attachment'), class: "text-xs text-gray-600 hover:text-gray-800" do %>
+                      <i class="fas <%= attachment_icon(attachment.content_type) %>"></i>
+                      <span class="truncate"><%= attachment.filename.to_s.truncate(10) %></span>
+                    <% end %>
+                  <% end %>
+                </div>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+</div>

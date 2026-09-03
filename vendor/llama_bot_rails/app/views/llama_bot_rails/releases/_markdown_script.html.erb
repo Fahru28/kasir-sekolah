@@ -1,0 +1,26 @@
+<script>
+  // Render markdown notes client-side (marked.js), mirroring the chat bubble's
+  // parseMarkdown so we don't add a Ruby markdown gem to the base image.
+  (function () {
+    function parseMarkdown(text) {
+      if (!text) return '';
+      try {
+        marked.setOptions({ breaks: true, gfm: true });
+        var html = marked.parse(text);
+        // Strip scripts and inline event handlers defensively.
+        html = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+        html = html.replace(/\son\w+="[^"]*"/gi, '');
+        html = html.replace(/\son\w+='[^']*'/gi, '');
+        return html;
+      } catch (e) {
+        return text.replace(/[&<>]/g, function (c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c];
+        }).replace(/\n/g, '<br>');
+      }
+    }
+
+    document.querySelectorAll('.release-notes').forEach(function (el) {
+      el.innerHTML = parseMarkdown(el.dataset.notes || '');
+    });
+  })();
+</script>

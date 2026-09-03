@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html data-theme="light">
+<head>
+  <title><%= request.host %> | Activity</title>
+  <%= render "head" %>
+</head>
+<body class="bg-base-200 min-h-screen">
+  <div class="max-w-5xl mx-auto px-4 py-8">
+    <%= render "nav", current: :activity %>
+
+    <%= render "time_zone_note" %>
+
+    <% if @selected_actor.present? %>
+      <div class="alert py-2 mb-4">
+        <i class="fas fa-user"></i>
+        <span class="text-sm">
+          Showing only
+          <span class="font-medium"><%= @selected_actor_label || "user ##{@selected_actor}" %></span>.
+        </span>
+        <%= link_to "Show everyone",
+              url_for(request.query_parameters.except("actor_id", "page")),
+              class: "btn btn-ghost btn-xs" %>
+      </div>
+    <% end %>
+
+    <%= form_with url: activity_path, method: :get, local: true, class: "card bg-base-100 shadow-sm mb-6" do |f| %>
+      <div class="card-body py-4">
+        <div class="flex flex-wrap gap-3 items-end">
+          <div class="form-control flex-1 min-w-48">
+            <label class="label py-1"><span class="label-text text-xs">Search</span></label>
+            <%= f.search_field :q, value: params[:q], placeholder: "Search activity...",
+                  class: "input input-bordered input-sm w-full" %>
+          </div>
+
+          <%# Person first: "what did this one user do?" is the question this
+              page gets asked most, and it is the one the feed could not answer. %>
+          <div class="form-control">
+            <label class="label py-1"><span class="label-text text-xs">Person</span></label>
+            <%= f.select :actor_id, options_for_select(@actors, params[:actor_id]),
+                  { include_blank: "Everyone" }, class: "select select-bordered select-sm" %>
+          </div>
+
+          <div class="form-control">
+            <label class="label py-1"><span class="label-text text-xs">Type</span></label>
+            <%= f.select :event_type, options_for_select(@event_types, params[:event_type]),
+                  { include_blank: "All types" }, class: "select select-bordered select-sm" %>
+          </div>
+
+          <div class="form-control">
+            <label class="label py-1"><span class="label-text text-xs">Source</span></label>
+            <%= f.select :source, options_for_select(@sources.map { |s| [ s.humanize, s ] }, params[:source]),
+                  { include_blank: "All sources" }, class: "select select-bordered select-sm" %>
+          </div>
+
+          <div class="form-control">
+            <label class="label py-1"><span class="label-text text-xs">Cause</span></label>
+            <%= f.select :category,
+                  options_for_select([ [ "People", "human" ], [ "Automated", "system" ] ], params[:category]),
+                  { include_blank: "Everything" }, class: "select select-bordered select-sm" %>
+          </div>
+
+          <div class="form-control">
+            <label class="label py-1"><span class="label-text text-xs">From</span></label>
+            <%= f.date_field :from, value: params[:from], class: "input input-bordered input-sm" %>
+          </div>
+
+          <div class="form-control">
+            <label class="label py-1"><span class="label-text text-xs">To</span></label>
+            <%= f.date_field :to, value: params[:to], class: "input input-bordered input-sm" %>
+          </div>
+
+          <div class="flex gap-2">
+            <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+            <%= link_to "Reset", activity_path, class: "btn btn-ghost btn-sm" %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <% if @events.empty? %>
+      <div class="text-center text-gray-400 py-16">
+        <i class="fas fa-wave-square text-4xl mb-3"></i>
+        <p>No activity recorded yet.</p>
+      </div>
+    <% else %>
+      <% @events.group_by { |event| llama_activity_day(event.occurred_at) }.each do |day, events| %>
+        <div class="mb-6">
+          <h2 class="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2"><%= day %></h2>
+          <div class="card bg-base-100 shadow-sm">
+            <div class="card-body py-2">
+              <% events.each do |event| %>
+                <%= render "event_row", event: event %>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      <% end %>
+
+      <div class="flex items-center justify-between text-sm text-gray-500">
+        <span><%= pluralize(@pagy.count, "event") %></span>
+        <div class="join">
+          <% if @pagy.prev %>
+            <%= link_to "Prev", url_for(request.query_parameters.merge(page: @pagy.prev)), class: "join-item btn btn-sm" %>
+          <% end %>
+          <span class="join-item btn btn-sm btn-disabled">Page <%= @pagy.page %> of <%= @pagy.pages %></span>
+          <% if @pagy.next %>
+            <%= link_to "Next", url_for(request.query_parameters.merge(page: @pagy.next)), class: "join-item btn btn-sm" %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</body>
+</html>

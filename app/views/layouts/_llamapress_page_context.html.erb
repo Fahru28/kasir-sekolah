@@ -1,0 +1,103 @@
+  <!-- Earliest-possible error capture. llamapress/console_capture.js is an ES
+       module, so it is DEFERRED — it does not exist yet while the body parses, and
+       an inline <script> that throws during page load would go unrecorded entirely.
+       That is precisely the "I loaded the page and it is broken" error a user most
+       wants to report. This classic script runs before everything and just buffers;
+       console_capture drains it on load (see llamapress/early_error_buffer.js) and
+       nulls the buffer, which is the signal for these listeners to stand down. -->
+  <script>
+    (function () {
+      window.__llamapressEarlyErrors = [];
+      function stash(entry) {
+        var buf = window.__llamapressEarlyErrors;
+        if (buf && buf.length < 25) buf.push(entry);
+      }
+      window.addEventListener("error", function (event) {
+        if (!window.__llamapressEarlyErrors) return;
+        stash({
+          kind: "uncaught",
+          message: event.message,
+          filename: event.filename,
+          lineno: event.lineno,
+          stack: event.error && event.error.stack
+        });
+      });
+      window.addEventListener("unhandledrejection", function (event) {
+        if (!window.__llamapressEarlyErrors) return;
+        var r = event.reason;
+        stash({
+          kind: "unhandled-rejection",
+          message: (r && r.message) || String(r),
+          stack: r && r.stack
+        });
+      });
+    })();
+  </script>
+
+<script>
+  // Force fresh data on every page load - cache busting with timestamp
+  window.page_loaded_at = <%= Time.current.to_f %>;
+  window.request_path = "<%= @request_path %>";
+  window.view_path = "<%= @view_path %>";
+
+  // The LlamaPress JS config object used to be defined right here, which meant
+  // it only existed on pages rendered through THIS partial — so the feedback
+  // bubble was silently absent from every other layout (prototypes, admin
+  // shells, anything Leo generated). The gem now injects it into the <head> of
+  // every HTML response instead (LlamaBotRails::PageConfigInjection), so there
+  // is one source of truth and no layout can forget it. Nothing to do here.
+
+  // Origins allowed to run JS in this page via the execute-js postMessage command
+  // (the agent's execute_browser_js tool). Fails closed to [] when unset, so
+  // arbitrary JS execution is rejected until an operator configures it. Does NOT
+  // affect any other postMessage command — those are unchanged.
+  window.LLAMABOT_ALLOWED_ORIGINS = <%= ENV['LLAMABOT_ALLOWED_ORIGINS'].to_s.split(',').map(&:strip).reject(&:blank?).to_json.html_safe %>;
+
+  // PostHog analytics config (passed from env vars)
+  window.LLAMABOT_POSTHOG_KEY = <%= ENV['LLAMABOT_POSTHOG_KEY'].present? ? ENV['LLAMABOT_POSTHOG_KEY'].to_json.html_safe : 'null' %>;
+  window.LLAMABOT_POSTHOG_HOST = <%= ENV['LLAMABOT_POSTHOG_HOST'].present? ? ENV['LLAMABOT_POSTHOG_HOST'].to_json.html_safe : 'null' %>;
+
+  // Cap the page snapshot before it is ever handed to the chat. A page that
+  // inlines a lot of content renders to megabytes of markup, and this value is
+  // re-sent on every chat message; the agent only ever reads request_path and
+  // view_path out of it. Mirrors llamapress/payload_caps.js (this partial is an
+  // inline script, so it cannot import the module) and LlamaBot's own ingestion
+  // cap, which is the load-bearing one.
+  var LLAMAPRESS_MAX_PAGE_HTML_BYTES = 64 * 1024;
+
+  function capPageHtml(html) {
+    if (typeof html !== 'string' || html.length <= LLAMAPRESS_MAX_PAGE_HTML_BYTES) return html;
+    var head = html.slice(0, Math.floor(LLAMAPRESS_MAX_PAGE_HTML_BYTES * 0.7));
+    var tail = html.slice(html.length - Math.floor(LLAMAPRESS_MAX_PAGE_HTML_BYTES * 0.2));
+    var omitted = html.length - head.length - tail.length;
+    return head + '\n... [truncated: ' + omitted + ' bytes omitted] ...\n' + tail;
+  }
+
+  // Function to update context variables
+  function updatePageContext() {
+    // These are set fresh on each page load from server-side variables
+    console.log('Page context updated:', {
+      request_path: window.request_path,
+      view_path: window.view_path,
+      loaded_at: window.page_loaded_at
+    });
+  }
+
+  // Wait for entire page to load before calling this
+  document.addEventListener('DOMContentLoaded', function() {
+    window.full_html = capPageHtml(document.documentElement.outerHTML);
+    updatePageContext();
+  });
+
+  // Handle Turbo navigation to ensure fresh context on SPA-style navigation
+  document.addEventListener('turbo:load', function() {
+    // Force refresh of page context on Turbo navigation
+    window.full_html = capPageHtml(document.documentElement.outerHTML);
+    updatePageContext();
+  });
+
+  // Additional event for when Turbo renders new content
+  document.addEventListener('turbo:render', function() {
+    updatePageContext();
+  });
+</script>

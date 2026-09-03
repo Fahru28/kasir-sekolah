@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html data-theme="light">
+<head>
+  <title><%= @shared_link.filename %> - Shared Media</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <!-- Open Graph tags for link previews -->
+  <meta property="og:title" content="<%= @shared_link.filename %>" />
+  <meta property="og:type" content="<%= @shared_link.video? ? 'video.other' : 'image' %>" />
+  <% if @shared_link.video? %>
+    <meta property="og:video" content="<%= stream_shared_link_url(@shared_link.token) %>" />
+    <meta property="og:video:type" content="<%= @shared_link.content_type %>" />
+  <% elsif @shared_link.image? %>
+    <meta property="og:image" content="<%= stream_shared_link_url(@shared_link.token) %>" />
+  <% end %>
+</head>
+<body class="bg-gray-900 min-h-screen flex items-center justify-center p-4">
+  <div class="max-w-4xl w-full">
+    <div class="bg-gray-800 rounded-lg shadow-2xl overflow-hidden">
+      <!-- Media Container -->
+      <div class="aspect-video bg-black flex items-center justify-center">
+        <% if @shared_link.video? %>
+          <video
+            controls
+            autoplay
+            class="w-full h-full"
+            preload="metadata"
+          >
+            <source src="<%= stream_shared_link_path(@shared_link.token) %>" type="<%= @shared_link.content_type %>">
+            Your browser does not support the video tag.
+          </video>
+        <% elsif @shared_link.image? %>
+          <img
+            src="<%= stream_shared_link_path(@shared_link.token) %>"
+            alt="<%= @shared_link.filename %>"
+            class="max-w-full max-h-full object-contain"
+          />
+        <% else %>
+          <div class="text-center text-gray-400">
+            <i class="fas fa-file text-6xl mb-4"></i>
+            <p>This file type cannot be previewed</p>
+            <p class="text-sm mt-2"><%= @shared_link.content_type %></p>
+          </div>
+        <% end %>
+      </div>
+
+      <!-- Info Bar -->
+      <div class="p-4 flex items-center justify-between text-white">
+        <div class="min-w-0 flex-1 mr-4">
+          <h1 class="font-semibold truncate"><%= @shared_link.filename %></h1>
+          <p class="text-sm text-gray-400">
+            <%= number_to_human_size(@shared_link.byte_size) %>
+            <span class="mx-2">|</span>
+            <%= @shared_link.view_count %> <%= @shared_link.view_count == 1 ? 'view' : 'views' %>
+          </p>
+        </div>
+        <div class="flex gap-2 flex-shrink-0">
+          <button
+            onclick="copyLink()"
+            class="btn btn-sm btn-outline btn-info"
+            id="copy-btn"
+          >
+            <i class="fas fa-link"></i> <span class="hidden sm:inline">Copy Link</span>
+          </button>
+          <%= link_to download_shared_link_path(@shared_link.token), class: "btn btn-sm btn-outline" do %>
+            <i class="fas fa-download"></i> <span class="hidden sm:inline">Download</span>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Powered By -->
+    <p class="text-center text-gray-600 text-sm mt-4">
+      Shared via LlamaBotRails
+    </p>
+  </div>
+
+  <script>
+    function copyLink() {
+      const url = window.location.href;
+      const textarea = document.createElement('textarea');
+      textarea.value = url;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+
+      const btn = document.getElementById('copy-btn');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+      btn.classList.remove('btn-info');
+      btn.classList.add('btn-success');
+      setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.classList.remove('btn-success');
+        btn.classList.add('btn-info');
+      }, 2000);
+    }
+  </script>
+</body>
+</html>

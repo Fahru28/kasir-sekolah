@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "Bash(docker compose:*)",
+      "Bash(bundle exec rspec:*)",
+      "Bash(source ~/.zshrc)",
+      "Bash(bundle install:*)",
+      "Bash(bundle exec rails db:migrate:*)",
+      "Bash(RAILS_ENV=test bundle exec rails:*)",
+      "Bash(./spec/dummy/bin/rails db:migrate RAILS_ENV=test)",
+      "Bash(bundle exec rake:*)",
+      "Bash(grep:*)"
+    ]
+  }
+}

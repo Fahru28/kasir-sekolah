@@ -1,0 +1,176 @@
+<%#
+  Shared attachment-staging behavior for every feedback file input (the feedback
+  form itself, comments, and replies).
+
+  Two things a bare <input type="file" multiple> gets wrong:
+    1. The native picker REPLACES the selection, so picking a second image drops
+       the first unless you shift-click them all in one dialog.
+    2. There's no way to see or drop a wrong pick before submitting.
+
+  Opt an input in with: data-preview-target="<id of an empty div>" and
+  onchange="mergePickedAttachments(this)".
+%>
+<script>
+  // Filenames like "screenshot.png" say nothing about what was captured, so
+  // show the actual picked image before the form is submitted.
+  function previewCommentAttachments(input, previewContainerId) {
+    const previewContainer = document.getElementById(previewContainerId);
+    if (!previewContainer) return;
+    previewContainer.innerHTML = '';
+
+    Array.from(input.files).forEach((file) => {
+      const preview = document.createElement('div');
+      preview.className = 'relative bg-gray-100 rounded p-1 text-xs w-24';
+
+      if (file.type.startsWith('image/')) {
+        const objectUrl = URL.createObjectURL(file);
+        const img = document.createElement('img');
+        img.src = objectUrl;
+        img.alt = file.name;
+        img.title = file.name;
+        img.className = 'w-full h-20 object-contain rounded bg-white';
+        img.onload = () => URL.revokeObjectURL(objectUrl);
+        // Only the show page has the zoom modal; the form pages just show the thumb.
+        if (typeof openImageModal === 'function') {
+          img.classList.add('cursor-zoom-in');
+          img.addEventListener('click', () => openImageModal(img.src, file.name));
+        }
+        preview.appendChild(img);
+      } else if (file.type.startsWith('video/')) {
+        const objectUrl = URL.createObjectURL(file);
+        const video = document.createElement('video');
+        video.src = objectUrl;
+        video.muted = true;
+        video.preload = 'metadata';
+        video.className = 'w-full h-20 object-cover rounded bg-black';
+        preview.appendChild(video);
+      } else {
+        let iconClass = 'fa-file';
+        if (file.type.includes('pdf')) iconClass = 'fa-file-pdf';
+        const icon = document.createElement('div');
+        icon.className = 'w-full h-20 flex items-center justify-center';
+        icon.innerHTML = `<i class="fas ${iconClass} text-2xl text-gray-400"></i>`;
+        preview.appendChild(icon);
+      }
+
+      const name = document.createElement('span');
+      name.className = 'block truncate text-gray-600 mt-1';
+      name.title = file.name;
+      name.textContent = file.name;
+      preview.appendChild(name);
+
+      // Picks accumulate now, so a wrong file can no longer be cleared by
+      // re-opening the picker -- it needs its own way out.
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.title = 'Remove';
+      remove.textContent = '×';
+      remove.className = 'absolute -top-1 -right-1 w-4 h-4 rounded-full bg-gray-700 text-white text-[10px] leading-none flex items-center justify-center hover:bg-red-600';
+      remove.addEventListener('click', () => removePendingAttachment(input, file));
+      preview.appendChild(remove);
+
+      previewContainer.appendChild(preview);
+    });
+  }
+
+  function attachmentFileKey(file) {
+    return `${file.name}:${file.size}:${file.lastModified}`;
+  }
+
+  // Single place that writes an input's file list, so every path (picker, paste,
+  // remove) leaves the input and its preview in the same state.
+  function setAttachmentFiles(input, files) {
+    const transfer = new DataTransfer();
+    files.forEach(f => transfer.items.add(f));
+    input.files = transfer.files;
+
+    const previewId = input.dataset.previewTarget;
+    if (previewId) previewCommentAttachments(input, previewId);
+  }
+
+  function mergeAttachmentFiles(input, kept, incoming) {
+    const seen = new Set(kept.map(attachmentFileKey));
+    const merged = kept.slice();
+    incoming.forEach((file) => {
+      const key = attachmentFileKey(file);
+      if (seen.has(key)) return;
+      seen.add(key);
+      merged.push(file);
+    });
+    setAttachmentFiles(input, merged);
+  }
+
+  // The native picker REPLACES the previous selection, so choosing a second image
+  // used to silently drop the first -- you had to save and re-open to add another.
+  // Merge each pick into what's already staged instead.
+  // Staged list lives on the element (not a module-scoped map) so this script stays
+  // safe to re-execute on a Turbo visit.
+  function mergePickedAttachments(input) {
+    const kept = input.multiple ? (input.llamaStagedFiles || []) : [];
+    mergeAttachmentFiles(input, kept, Array.from(input.files));
+    input.llamaStagedFiles = Array.from(input.files);
+  }
+
+  function removePendingAttachment(input, file) {
+    const key = attachmentFileKey(file);
+    setAttachmentFiles(input, Array.from(input.files).filter(f => attachmentFileKey(f) !== key));
+    input.llamaStagedFiles = Array.from(input.files);
+  }
+
+  // Already-saved attachments ride along as hidden signed_id fields so a text-only edit
+  // doesn't wipe them -- which also meant the set could only ever grow. Dropping a file
+  // from that list is what removes it, so disable (don't delete) its hidden field: the
+  // row stays on screen and the click can be taken back before saving.
+  function removeExistingAttachment(button) {
+    const row = button.closest('[data-existing-attachment]');
+    if (!row) return;
+
+    const field = row.querySelector('input[type="hidden"]');
+    if (!field) return;
+
+    const removed = !field.disabled;
+    field.disabled = removed;
+    row.classList.toggle('opacity-50', removed);
+    row.querySelector('[data-attachment-name]')?.classList.toggle('line-through', removed);
+    button.title = removed ? 'Keep this attachment' : 'Remove';
+    button.innerHTML = removed ? '<i class="fas fa-rotate-left"></i>' : '<i class="fas fa-trash"></i>';
+  }
+
+  // Paste-to-attach: copy an image (screenshot, image from another page), click into
+  // any text box in the form, hit Cmd/Ctrl+V -> it lands in that form's attachments.
+  // No save-to-disk-then-browse round trip.
+  function addFilesToAttachmentInput(input, files) {
+    const kept = input.multiple ? Array.from(input.files) : [];
+    mergeAttachmentFiles(input, kept, files);
+    input.llamaStagedFiles = Array.from(input.files);
+  }
+
+  // Delegated so it also covers reply forms, which are rendered per-comment.
+  document.addEventListener('paste', (event) => {
+    const el = event.target;
+    if (!el || (el.tagName !== 'TEXTAREA' && el.tagName !== 'INPUT')) return;
+
+    const fileInput = el.closest('form')?.querySelector('input[type="file"]');
+    if (!fileInput) return;
+
+    const images = Array.from(event.clipboardData?.items || [])
+      .filter(item => item.kind === 'file' && item.type.startsWith('image/'))
+      .map(item => item.getAsFile())
+      .filter(Boolean);
+    if (!images.length) return;
+
+    event.preventDefault();
+
+    // Clipboard images usually arrive as a generic "image.png" — stamp them so
+    // multiple pastes don't all look like the same file in the attachment list.
+    const stamped = images.map((file, i) => new File(
+      [file],
+      `pasted-image-${Date.now()}${i ? '-' + i : ''}.${(file.type.split('/')[1] || 'png').replace('jpeg', 'jpg')}`,
+      { type: file.type }
+    ));
+
+    addFilesToAttachmentInput(fileInput, stamped);
+    const label = stamped.length === 1 ? 'Image attached' : `${stamped.length} images attached`;
+    if (typeof toastManager !== 'undefined') toastManager.show(label, 'success', 2000);
+  });
+</script>

@@ -1,0 +1,166 @@
+<% content_for :title, "Requests Dashboard - LlamaBotRails" %>
+
+  <div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8">
+    <div class="max-w-7xl mx-auto">
+      <!-- Header -->
+      <div class="mb-8 flex items-center justify-between">
+        <div>
+          <h1 class="text-4xl font-bold text-gray-800 flex items-center gap-3">
+            <i class="fas fa-chart-bar text-yellow-500"></i>
+            Requests Dashboard
+          </h1>
+          <p class="text-gray-600 mt-2">Overview of all user requests</p>
+        </div>
+        <div class="flex gap-2">
+          <%= link_to user_requests_path, class: "btn btn-outline btn-sm" do %>
+            <i class="fas fa-list"></i> List View
+          <% end %>
+          <%= link_to tags_path, class: "btn btn-outline btn-sm" do %>
+            <i class="fas fa-tags"></i> Manage Tags
+          <% end %>
+        </div>
+      </div>
+
+      <!-- Stats Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow-sm p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-gray-500 text-sm">Total Requests</p>
+              <p class="text-3xl font-bold text-gray-800"><%= @stats[:total] %></p>
+            </div>
+            <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+              <i class="fas fa-lightbulb text-yellow-600 text-xl"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-gray-500 text-sm">Pending</p>
+              <p class="text-3xl font-bold text-blue-600"><%= @stats[:pending] %></p>
+            </div>
+            <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+              <i class="fas fa-hourglass-half text-blue-600 text-xl"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-gray-500 text-sm">In Progress</p>
+              <p class="text-3xl font-bold text-purple-600"><%= @stats[:active] %></p>
+            </div>
+            <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+              <i class="fas fa-spinner text-purple-600 text-xl"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-gray-500 text-sm">Completed</p>
+              <p class="text-3xl font-bold text-green-600"><%= @stats[:completed] %></p>
+            </div>
+            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+              <i class="fas fa-check-circle text-green-600 text-xl"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Kanban Board -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <% LlamaBotRails::UserRequest::STATUSES.each do |status| %>
+          <div class="bg-white rounded-lg shadow-sm overflow-hidden flex flex-col">
+            <!-- Column Header -->
+            <div class="bg-gradient-to-r from-gray-700 to-gray-600 px-4 py-3 text-white">
+              <div class="flex items-center gap-2 mb-1">
+                <i class="fas <%= request_status_icon(status) %>"></i>
+                <h2 class="font-semibold text-sm uppercase tracking-wide"><%= status.humanize %></h2>
+              </div>
+              <span class="inline-block bg-yellow-300 text-xs px-2 py-1 rounded-full text-gray-900 font-semibold">
+                <%= @requests_by_status[status]&.count || 0 %> items
+              </span>
+            </div>
+
+            <!-- Cards Container -->
+            <div class="flex-1 p-3 bg-gray-50 overflow-y-auto space-y-2" style="min-height: 300px; max-height: 500px;">
+              <% (@requests_by_status[status] || []).each do |request| %>
+                <div class="bg-white rounded-lg p-3 shadow-sm border-l-4 border-yellow-500 hover:shadow-md transition-shadow">
+                  <div class="flex items-start justify-between mb-2">
+                    <span class="badge badge-xs badge-outline">
+                      <%= request.request_type %>
+                    </span>
+                    <span class="badge badge-xs <%= priority_badge_class(request.priority) %>">
+                      <%= priority_label(request.priority) %>
+                    </span>
+                  </div>
+                  <h3 class="font-semibold text-gray-800 text-sm line-clamp-2 mb-2">
+                    <%= link_to request.title, user_request_path(request), class: "hover:text-blue-600" %>
+                  </h3>
+                  <div class="text-xs text-gray-500">
+                    <span><%= request.display_author %></span>
+                    <span class="mx-1">-</span>
+                    <span><%= time_ago_in_words(request.created_at) %> ago</span>
+                  </div>
+                </div>
+              <% end %>
+
+              <% if (@requests_by_status[status] || []).empty? %>
+                <div class="flex items-center justify-center h-24 text-gray-400">
+                  <div class="text-center">
+                    <i class="fas fa-inbox text-xl mb-1"></i>
+                    <p class="text-xs">No items</p>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+
+      <!-- Popular Requests & Tags -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+        <!-- Popular Requests -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+          <h3 class="text-lg font-semibold text-gray-800 mb-4">
+            <i class="fas fa-fire mr-2 text-orange-500"></i>Popular Requests
+          </h3>
+          <div class="space-y-3">
+            <% @popular_requests.each do |request| %>
+              <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                <div class="flex-1">
+                  <p class="font-medium text-gray-800 text-sm">
+                    <%= link_to truncate(request.title, length: 40), user_request_path(request), class: "hover:text-blue-600" %>
+                  </p>
+                  <p class="text-xs text-gray-500"><%= request.display_author %> - <%= time_ago_in_words(request.created_at) %> ago</p>
+                </div>
+                <span class="badge badge-sm <%= request_status_badge_class(request.status) %>"><%= request.status %></span>
+              </div>
+            <% end %>
+          </div>
+        </div>
+
+        <!-- Popular Tags -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+          <h3 class="text-lg font-semibold text-gray-800 mb-4">
+            <i class="fas fa-tags mr-2 text-blue-600"></i>Popular Tags
+          </h3>
+          <div class="flex flex-wrap gap-2">
+            <% @tags.each do |tag| %>
+              <span class="badge badge-lg" style="<%= tag_style(tag) %>">
+                <%= tag.name %> (<%= tag.usage_count %>)
+              </span>
+            <% end %>
+            <% if @tags.empty? %>
+              <p class="text-gray-500 text-sm">No tags yet</p>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>

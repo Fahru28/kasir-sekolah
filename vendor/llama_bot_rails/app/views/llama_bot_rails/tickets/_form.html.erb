@@ -1,0 +1,171 @@
+<%= form_with(model: ticket, url: ticket.persisted? ? llama_bot_rails.ticket_path(ticket) : llama_bot_rails.tickets_path, local: true, html: { multipart: true }, class: "space-y-4") do |form| %>
+  <% if ticket.errors.any? %>
+    <div class="alert alert-error">
+      <ul>
+        <% ticket.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="form-control">
+    <%= form.label :title, class: "label" %>
+    <%= form.text_field :title, class: "input input-bordered w-full", required: true %>
+  </div>
+
+  <div class="form-control">
+    <%= form.label :description, class: "label" %>
+    <%= form.text_area :description, class: "textarea textarea-bordered w-full h-32" %>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="form-control">
+      <%= form.label :project_id, "Project", class: "label" %>
+      <%= form.collection_select :project_id, LlamaBotRails::Project.ordered, :id, :name, { include_blank: "No Project" }, class: "select select-bordered w-full" %>
+    </div>
+
+    <div class="form-control">
+      <%= form.label :status, class: "label" %>
+      <%= form.select :status, LlamaBotRails::Ticket::STATUSES.map { |s| [s.titleize, s] }, {}, class: "select select-bordered w-full" %>
+    </div>
+
+    <div class="form-control">
+      <%= form.label :position, class: "label" %>
+      <%= form.number_field :position, class: "input input-bordered w-full" %>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="form-control">
+      <%= form.label :ticket_type, class: "label" %>
+      <%= form.select :ticket_type, LlamaBotRails::Ticket.ticket_types.keys.map { |t| [t.titleize, t] }, { include_blank: "Select type..." }, class: "select select-bordered w-full" %>
+    </div>
+
+    <div class="form-control">
+      <%= form.label :agent_result, class: "label" %>
+      <%= form.select :agent_result, LlamaBotRails::Ticket.agent_results.keys.map { |r| [r.titleize, r] }, { include_blank: "Select result..." }, class: "select select-bordered w-full" %>
+    </div>
+  </div>
+
+  <!-- Points System -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="form-control">
+      <%= form.label :points_estimate, "Points Estimate", class: "label" %>
+      <%= form.number_field :points_estimate, class: "input input-bordered w-full", min: 0, placeholder: "Story points estimate" %>
+    </div>
+
+    <div class="form-control">
+      <%= form.label :points_actual, "Points Actual", class: "label" %>
+      <%= form.number_field :points_actual, class: "input input-bordered w-full", step: 0.01, placeholder: "Calculated from tokens + time" %>
+      <label class="label"><span class="label-text-alt text-gray-500">Usually auto-calculated</span></label>
+    </div>
+  </div>
+
+  <div class="form-control">
+    <%= form.label :research_notes, class: "label" %>
+    <%= form.text_area :research_notes, class: "textarea textarea-bordered w-full h-24" %>
+  </div>
+
+  <div class="form-control">
+    <%= form.label :notes, class: "label" %>
+    <%= form.text_area :notes, class: "textarea textarea-bordered w-full h-24" %>
+  </div>
+
+  <div class="form-control">
+    <%= form.label :agent_notes, class: "label" %>
+    <%= form.text_area :agent_notes, class: "textarea textarea-bordered w-full h-24" %>
+  </div>
+
+  <div class="form-control">
+    <%= form.label :langsmith_url, "LangSmith URL (Legacy)", class: "label" %>
+    <%= form.text_field :langsmith_url, class: "input input-bordered w-full", placeholder: "https://smith.langchain.com/..." %>
+    <label class="label"><span class="label-text-alt text-gray-500">Use Traces section for multiple runs</span></label>
+  </div>
+
+  <!-- Media Uploads (Images & Videos) -->
+  <div class="form-control">
+    <%= form.label :images, "Attach Media", class: "label" %>
+    <%= form.file_field :images, multiple: true, class: "file-input file-input-bordered w-full", accept: "image/*,video/mp4,video/webm" %>
+    <label class="label"><span class="label-text-alt text-gray-500">You can select multiple images or videos (MP4, WebM)</span></label>
+  </div>
+
+  <% if ticket.persisted? && ticket.images.attached? %>
+    <div class="form-control">
+      <label class="label font-medium">Current Attachments (<%= ticket.images.count %>)</label>
+      <div class="flex flex-wrap gap-3">
+        <% ticket.images.each do |attachment| %>
+          <div class="relative group">
+            <% if attachment.image? %>
+              <%= image_tag main_app.rails_blob_path(attachment), class: "rounded border w-24 h-24 object-cover" %>
+            <% elsif attachment.video? %>
+              <div class="rounded border w-24 h-24 bg-gray-800 flex items-center justify-center relative">
+                <i class="fas fa-video text-white text-2xl"></i>
+                <span class="absolute bottom-1 text-xs text-white bg-black/50 px-1 rounded">Video</span>
+              </div>
+            <% else %>
+              <div class="rounded border w-24 h-24 bg-gray-200 flex items-center justify-center">
+                <i class="fas fa-file text-gray-500 text-2xl"></i>
+              </div>
+            <% end %>
+            <%= button_to llama_bot_rails.remove_image_ticket_path(ticket, image_id: attachment.id), method: :delete, class: "absolute -top-2 -right-2 btn btn-xs btn-circle btn-error opacity-0 group-hover:opacity-100 transition-opacity", data: { turbo_confirm: "Remove this attachment?" } do %>
+              <i class="fas fa-times"></i>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- LLM Tracking Section (Collapsible) -->
+  <div class="collapse collapse-arrow bg-base-200 rounded-lg">
+    <input type="checkbox" <%= ticket.persisted? && (ticket.tokens_to_create_ticket.present? || ticket.llm_model.present?) ? 'checked' : '' %> />
+    <div class="collapse-title font-medium">
+      <i class="fas fa-robot mr-2 text-purple-600"></i>LLM Tracking (typically auto-filled)
+    </div>
+    <div class="collapse-content">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+        <div class="form-control">
+          <%= form.label :llm_model, "LLM Model", class: "label" %>
+          <%= form.text_field :llm_model, class: "input input-bordered w-full", placeholder: "e.g., claude-3-opus" %>
+        </div>
+
+        <div class="form-control">
+          <%= form.label :tokens_to_create_ticket, "Tokens (Creation)", class: "label" %>
+          <%= form.number_field :tokens_to_create_ticket, class: "input input-bordered w-full", min: 0 %>
+        </div>
+
+        <div class="form-control">
+          <%= form.label :tokens_to_implement_ticket, "Tokens (Implementation)", class: "label" %>
+          <%= form.number_field :tokens_to_implement_ticket, class: "input input-bordered w-full", min: 0 %>
+        </div>
+
+        <div class="form-control">
+          <label class="label">Total Tokens</label>
+          <input type="text" class="input input-bordered w-full bg-gray-100" value="<%= ticket.total_tokens %>" disabled />
+        </div>
+
+        <div class="form-control">
+          <%= form.label :work_started_at, "Work Started", class: "label" %>
+          <%= form.datetime_local_field :work_started_at, class: "input input-bordered w-full" %>
+        </div>
+
+        <div class="form-control">
+          <%= form.label :work_completed_at, "Work Completed", class: "label" %>
+          <%= form.datetime_local_field :work_completed_at, class: "input input-bordered w-full" %>
+        </div>
+      </div>
+
+      <% if ticket.work_duration.present? %>
+        <div class="mt-4 p-3 bg-gray-100 rounded-lg">
+          <strong>Duration:</strong> <%= ticket.work_duration_in_minutes %> minutes
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="flex gap-2 pt-4">
+    <%= form.submit class: "btn btn-primary" %>
+    <%= link_to "Cancel", llama_bot_rails.tickets_path, class: "btn btn-ghost" %>
+  </div>
+<% end %>

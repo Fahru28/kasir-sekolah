@@ -1,0 +1,6 @@
+<%# Unified Login CTA — kept for back-compat. Delegates to the gem helper so the
+    markup lives in one place (SsoHelper.cta_html). Prefer calling the helper
+    directly from host views: an engine partial lookup is lazy in dev mode and can
+    miss the first cold-boot requests, whereas the helper is available immediately.
+    No ERB tags in this comment on purpose — an inner close-tag would end it early. %>
+<%= LlamaBotRails::SsoHelper.cta_html %>

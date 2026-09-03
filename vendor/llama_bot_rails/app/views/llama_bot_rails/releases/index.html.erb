@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html data-theme="light">
+<head>
+  <title><%= request.host %> | What's New</title>
+  <%= render "head" %>
+</head>
+<body class="bg-base-200 min-h-screen">
+  <div class="max-w-3xl mx-auto px-4 py-8">
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h1 class="text-3xl font-bold">What's New</h1>
+        <p class="text-sm text-gray-500 mt-1">
+          You're running
+          <span class="badge badge-primary badge-outline font-mono"><%= LlamaBotRails.app_version %></span>
+        </p>
+      </div>
+      <% if can?(:manage_releases) %>
+        <%= link_to new_release_path, class: "btn btn-primary btn-sm" do %>
+          <i class="fas fa-plus mr-1"></i> New Release
+        <% end %>
+      <% end %>
+    </div>
+
+    <% if @releases.empty? %>
+      <div class="text-center text-gray-400 py-16">
+        <i class="fas fa-box-open text-4xl mb-3"></i>
+        <p>No release notes yet.</p>
+      </div>
+    <% else %>
+      <div class="space-y-4">
+        <% @releases.each do |release| %>
+          <div class="card bg-base-100 shadow-sm border <%= release.current? ? 'border-primary' : 'border-base-300' %>">
+            <div class="card-body">
+              <div class="flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="badge badge-lg font-mono"><%= release.version %></span>
+                  <% if release.current? %>
+                    <span class="badge badge-primary badge-sm">Your version</span>
+                  <% end %>
+                  <% unless release.published %>
+                    <span class="badge badge-ghost badge-sm">Draft</span>
+                  <% end %>
+                  <% if release.title.present? %>
+                    <h2 class="text-lg font-semibold"><%= release.title %></h2>
+                  <% end %>
+                </div>
+                <% if release.released_at %>
+                  <span class="text-xs text-gray-400 whitespace-nowrap"><%= release.released_at.strftime("%b %-d, %Y") %></span>
+                <% end %>
+              </div>
+
+              <% if release.notes.present? %>
+                <div class="prose prose-sm max-w-none mt-2 release-notes" data-notes="<%= release.notes %>"></div>
+              <% end %>
+
+              <div class="card-actions justify-end mt-2">
+                <%= link_to "View", release_path(release), class: "btn btn-ghost btn-xs" %>
+                <% if can?(:manage_releases) %>
+                  <%= link_to "Edit", edit_release_path(release), class: "btn btn-ghost btn-xs" %>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <%= render "markdown_script" %>
+</body>
+</html>

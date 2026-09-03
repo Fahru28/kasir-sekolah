@@ -1,0 +1,137 @@
+<div class="max-w-7xl mx-auto px-4 py-6">
+  <div class="flex flex-wrap justify-between items-start gap-4 mb-6">
+    <div>
+      <h1 class="text-2xl font-bold flex items-center gap-2"><i class="fa-solid fa-chart-column text-primary"></i> Laporan Penjualan Harian</h1>
+      <p class="text-sm opacity-60 mt-1">Filter tanggal, lihat omzet & laba per hari, dan detail transaksi.</p>
+    </div>
+    <button onclick="window.print()" class="btn btn-outline btn-sm gap-2 print:hidden"><i class="fa-solid fa-print"></i> Cetak</button>
+  </div>
+
+  <!-- Filter -->
+  <div class="card bg-base-100 shadow border border-base-200 mb-6">
+    <div class="card-body p-4">
+      <%= form_with url: daily_reports_path, method: :get, class: "flex flex-wrap gap-3 items-end" do %>
+        <label class="form-control">
+          <span class="label-text text-xs font-semibold">Dari</span>
+          <input type="date" name="from" value="<%= @from %>" class="input input-bordered input-sm" />
+        </label>
+        <label class="form-control">
+          <span class="label-text text-xs font-semibold">Sampai</span>
+          <input type="date" name="to" value="<%= @to %>" class="input input-bordered input-sm" />
+        </label>
+        <button type="submit" class="btn btn-primary btn-sm gap-1"><i class="fa-solid fa-filter"></i> Tampilkan</button>
+        <a href="/laporan" class="btn btn-ghost btn-sm">Reset</a>
+        <span class="text-xs opacity-50 ml-auto self-center hidden sm:inline">Menampilkan <%= @from %> — <%= @to %></span>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Summary stats -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="card bg-base-100 shadow border border-base-200">
+      <div class="card-body p-4">
+        <p class="text-xs opacity-60">Total Omzet</p>
+        <p class="text-xl font-black text-primary"><%= rupiah(@total_omzet) %></p>
+        <p class="text-xs opacity-50"><%= @total_trx %> transaksi · <%= @total_items %> item</p>
+      </div>
+    </div>
+    <div class="card bg-base-100 shadow border border-success/20">
+      <div class="card-body p-4">
+        <p class="text-xs opacity-60">Total Keuntungan</p>
+        <p class="text-xl font-black text-success"><%= rupiah(@total_profit) %></p>
+        <p class="text-xs opacity-50">Laba kotor periode ini</p>
+      </div>
+    </div>
+    <div class="card bg-base-100 shadow border border-base-200">
+      <div class="card-body p-4">
+        <p class="text-xs opacity-60">Per Metode Bayar</p>
+        <div class="space-y-1 mt-1 text-sm">
+          <div class="flex justify-between"><span class="opacity-70">Tunai</span><b><%= rupiah(@tunai) %></b></div>
+          <div class="flex justify-between"><span class="opacity-70">Transfer/QRIS</span><b><%= rupiah(@transfer) %></b></div>
+          <div class="flex justify-between"><span class="opacity-70">Piutang</span><b class="text-warning"><%= rupiah(@piutang) %></b></div>
+        </div>
+      </div>
+    </div>
+    <div class="card bg-base-100 shadow border border-base-200">
+      <div class="card-body p-4">
+        <p class="text-xs opacity-60">Barang Terlaris</p>
+        <% if @top_products.any? %>
+          <ul class="space-y-1 mt-1">
+            <% @top_products.each do |name, qty| %>
+              <li class="flex justify-between text-sm"><span class="truncate pr-2"><%= name %></span><span class="badge badge-ghost badge-sm"><%= qty %> pcs</span></li>
+            <% end %>
+          </ul>
+        <% else %>
+          <p class="text-sm opacity-50 mt-1">Belum ada data</p>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Per-day breakdown -->
+  <% if @per_day.any? %>
+    <div class="space-y-4">
+      <% @per_day.each do |date, sales| %>
+        <div class="card bg-base-100 shadow border border-base-200">
+          <div class="card-body p-0">
+            <div class="flex flex-wrap justify-between items-center gap-3 px-5 py-3 bg-base-200/60 border-b border-base-200">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-primary text-white flex flex-col items-center justify-center leading-none">
+                  <span class="text-[10px] font-bold uppercase"><%= l(date, format: "%b") rescue date.strftime("%b") %></span>
+                  <span class="text-sm font-black"><%= date.day %></span>
+                </div>
+                <div>
+                  <p class="font-bold text-sm"><%= l(date, format: :long) rescue date.to_s %></p>
+                  <p class="text-xs opacity-60"><%= sales.size %> transaksi · <%= sales.sum(&:total_items) %> item</p>
+                </div>
+              </div>
+              <div class="flex gap-4 text-sm">
+                <span>Omzet <b class="text-primary"><%= rupiah(sales.sum(&:total_amount)) %></b></span>
+                <span>Laba <b class="text-success"><%= rupiah(sales.sum(&:profit)) %></b></span>
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="table table-sm">
+                <thead><tr><th>No Transaksi</th><th>Siswa</th><th class="text-center">Item</th><th class="text-right">Total</th><th class="text-right">Laba</th><th>Metode</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                  <% sales.each do |s| %>
+                    <tr class="hover">
+                      <td class="font-mono text-xs"><a href="/sales/<%= s.id %>" class="link link-primary"><%= s.number %></a></td>
+                      <td class="text-sm"><%= s.student.name %><br><span class="text-xs opacity-50"><%= s.student.class_name %></span></td>
+                      <td class="text-center text-sm"><%= s.total_items %></td>
+                      <td class="text-right font-semibold text-sm"><%= rupiah(s.total_amount) %></td>
+                      <td class="text-right text-success text-sm"><%= rupiah(s.profit) %></td>
+                      <td><span class="badge badge-ghost badge-sm"><%= s.payment_method %></span></td>
+                      <td><span class="badge badge-sm <%= s.status == 'Lunas' ? 'badge-success' : 'badge-warning' %>"><%= s.status %></span></td>
+                      <td><a href="/sales/<%= s.id %>" class="btn btn-ghost btn-xs">Detail</a></td>
+                    </tr>
+                  <% end %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="card bg-base-100 shadow border border-base-200">
+      <div class="card-body text-center py-12">
+        <i class="fa-solid fa-inbox text-3xl opacity-20"></i>
+        <p class="text-sm opacity-60 mt-2">Tidak ada penjualan pada periode ini.</p>
+        <a href="/kasir" class="btn btn-primary btn-sm mt-4 gap-2"><i class="fa-solid fa-cash-register"></i> Buka Kasir</a>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Quick link back on dashboard -->
+  <div class="mt-6 print:hidden">
+    <a href="/dashboard" class="btn btn-ghost btn-sm gap-1"><i class="fa-solid fa-arrow-left"></i> Kembali ke Dashboard</a>
+  </div>
+</div>
+
+<style>
+  @media print {
+    .navbar, .btn, form { display: none !important; }
+    body { background: white !important; }
+  }
+</style>

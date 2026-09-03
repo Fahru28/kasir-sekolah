@@ -1,0 +1,70 @@
+<%# Shared "Inbox" navigation. Rendered by layouts/llama_bot_rails/inbox.
+    Row 1 is the app bar. Row 2 is the tab bar linking the five Inbox pages.
+
+    The Inbox is a self-contained app: there is deliberately no "Back to App"
+    link here (the old user_feedbacks/_navbar had one). Nothing in this chrome
+    should navigate out of the Inbox — the surrounding chat UI owns moving
+    between its own tabs, and an escape hatch in here just competes with it. %>
+<header class="bg-white/80 backdrop-blur-sm border-b border-gray-200/50 sticky top-0 z-40">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between items-center h-12">
+      <%# Wordmark, not a link — it names where you are and goes nowhere. %>
+      <div class="flex items-center gap-2 text-gray-700 text-sm font-semibold">
+        <i class="fas fa-inbox text-gray-400"></i>
+        <span>Inbox</span>
+      </div>
+
+      <%# User info on the right. `current_llama_user` comes from Authorizable,
+          which not every host context mixes in — guard before calling it. %>
+      <div class="flex items-center gap-3">
+        <% llama_user = respond_to?(:current_llama_user) ? current_llama_user : nil %>
+        <% if llama_user %>
+          <div class="flex items-center gap-2 text-sm text-gray-600">
+            <div class="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-xs font-medium">
+              <%= llama_user.email&.first&.upcase || '?' %>
+            </div>
+            <span class="hidden sm:inline text-gray-700"><%= llama_user.email %></span>
+          </div>
+        <% elsif respond_to?(:current_llama_user) %>
+          <span class="text-sm text-gray-500">Not signed in</span>
+        <% end %>
+
+        <%# Reloads whichever Inbox page you are on. A link to request.fullpath
+            rather than a JS reload: it needs no script, it works the same inside
+            the chat UI's iframe, and fullpath carries the query string, so a
+            filtered or paged view refreshes as itself instead of resetting.
+            turbo: false so this always re-fetches rather than serving a cached
+            preview of the page it is meant to update. %>
+        <%= link_to request.fullpath,
+              class: "inbox-refresh flex items-center justify-center w-8 h-8 rounded-full text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors",
+              title: "Refresh this page",
+              "aria-label": "Refresh this page",
+              data: { turbo: false } do %>
+          <i class="fas fa-rotate-right"></i>
+        <% end %>
+      </div>
+    </div>
+
+    <%# The unread count is rendered server-side so the badge is right on first
+        paint, then kept live by the unread bridge, which rewrites the span's
+        text on every poll (see shared/_parent_unread_bridge). %>
+    <% unread_messages = inbox_unread_message_count %>
+    <nav class="flex items-center gap-1 -mb-px overflow-x-auto" aria-label="Inbox">
+      <% inbox_tabs.each do |tab| %>
+        <%= link_to tab[:href],
+              class: "inbox-tab flex items-center gap-2 whitespace-nowrap px-3 py-2 text-sm border-b-2 transition-colors #{tab[:active] ? 'border-blue-600 text-blue-700 font-semibold' : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300'}",
+              'aria-current': (tab[:active] ? 'page' : nil) do %>
+          <i class="fas <%= tab[:icon] %>"></i>
+          <span class="inbox-tab-label"><%= tab[:label] %></span>
+          <% if tab[:controller] == "conversations" %>
+            <%= tag.span (unread_messages > 99 ? "99+" : unread_messages),
+                  class: "inbox-tab-unread inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full bg-red-500 text-white text-[11px] font-semibold leading-none #{'hidden' if unread_messages.zero?}",
+                  data: { llamabot: "inbox-nav-unread-badge" },
+                  "aria-live": "polite",
+                  "aria-label": (unread_messages.zero? ? nil : pluralize(unread_messages, "unread message")) %>
+          <% end %>
+        <% end %>
+      <% end %>
+    </nav>
+  </div>
+</header>

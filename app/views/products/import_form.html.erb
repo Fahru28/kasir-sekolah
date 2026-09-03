@@ -1,0 +1,26 @@
+<div class="max-w-3xl mx-auto px-4 py-6">
+  <a href="/products" class="btn btn-ghost btn-sm gap-1 mb-4"><i class="fa-solid fa-arrow-left"></i> Kembali ke Data Barang</a>
+  <div class="card bg-base-100 shadow border border-base-200">
+    <div class="card-body">
+      <h1 class="text-xl font-bold flex items-center gap-2"><i class="fa-solid fa-file-excel text-success"></i> Upload Data Barang dari Excel</h1>
+      <p class="text-sm opacity-60 mt-1">File <b>.xlsx / .xls / .csv</b> — header: <span class="font-mono text-xs">Kode_Barang, Nama_Barang, Kategori, Satuan, Harga_Modal, Harga_Jual, Stok_Awal, Min_Stok</span></p>
+      <div class="alert bg-amber-50 border-amber-200 mt-4 py-3">
+        <i class="fa-solid fa-circle-info text-amber-600"></i>
+        <div class="text-sm">
+          <ul class="list-disc list-inside text-xs opacity-70">
+            <li>Jika Kode_Barang sudah ada → data diperbarui.</li>
+            <li>Harga dan stok boleh kosong — akan pakai 0.</li>
+            <li><a href="/products/template.xlsx" class="link link-primary">Download template Excel</a></li>
+          </ul>
+        </div>
+      </div>
+      <%= form_with url: import_products_path, method: :post, multipart: true, class: "mt-4 space-y-4" do |f| %>
+        <input type="file" name="file" accept=".xlsx,.xls,.csv" required class="file-input file-input-bordered file-input-primary w-full" />
+        <div class="flex gap-2">
+          <button type="submit" class="btn btn-primary gap-2"><i class="fa-solid fa-upload"></i> Upload & Import</button>
+          <a href="/products" class="btn btn-ghost">Batal</a>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
