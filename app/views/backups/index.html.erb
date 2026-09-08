@@ -1,0 +1,81 @@
+<div class="max-w-5xl mx-auto px-4 py-6">
+  <div class="flex items-center gap-3 mb-6">
+    <div class="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center"><i class="fa-solid fa-floppy-disk"></i></div>
+    <div>
+      <h1 class="text-2xl font-bold">Backup Data ke Excel</h1>
+      <p class="text-sm opacity-60">Unduh semua data jadi 1 file Excel — persis seperti file awal kamu (11 sheet jadi 8 sheet ringkas)</p>
+    </div>
+  </div>
+
+  <div class="card bg-base-100 shadow-xl border border-base-200">
+    <div class="card-body">
+      <div class="flex flex-col lg:flex-row gap-6 items-start">
+        <div class="flex-1">
+          <div class="alert bg-success/10 border-success/20 mb-4">
+            <i class="fa-solid fa-file-excel text-success text-xl"></i>
+            <div>
+              <p class="font-bold text-sm">1 File Excel = Semua Data</p>
+              <p class="text-xs opacity-70">Akan menghasilkan <b>Backup_Kasir_Sekolah_YYYYMMDD.xlsx</b> dengan 8 sheet: Dashboard, Data_Anak, Data_Barang, Barang_Masuk, Penjualan, Detail_Penjualan, Pembayaran_Piutang, Piutang.</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            <div class="stat bg-base-200 rounded-xl p-3">
+              <div class="stat-title text-xs">Siswa</div>
+              <div class="stat-value text-lg"><%= @students_count %></div>
+            </div>
+            <div class="stat bg-base-200 rounded-xl p-3">
+              <div class="stat-title text-xs">Barang</div>
+              <div class="stat-value text-lg"><%= @products_count %></div>
+            </div>
+            <div class="stat bg-base-200 rounded-xl p-3">
+              <div class="stat-title text-xs">Penjualan</div>
+              <div class="stat-value text-lg"><%= @sales_count %></div>
+            </div>
+            <div class="stat bg-base-200 rounded-xl p-3">
+              <div class="stat-title text-xs">Piutang</div>
+              <div class="stat-value text-lg text-warning"><%= @piutang_count %></div>
+              <div class="stat-desc text-xs"><%= rupiah(@total_piutang) %></div>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="table table-sm">
+              <thead><tr><th>Sheet di Excel</th><th>Isi</th><th>Kolom kunci</th></tr></thead>
+              <tbody class="text-sm">
+                <tr><td><span class="badge badge-primary badge-sm">Dashboard</span></td><td>Ringkasan hari ini</td><td class="opacity-60 text-xs">Total, transaksi, piutang, stok menipis</td></tr>
+                <tr><td><span class="badge badge-ghost badge-sm">Data_Anak</span></td><td>Semua siswa</td><td class="opacity-60 text-xs">ID_Anak, NIS, Nama, Kelas...</td></tr>
+                <tr><td><span class="badge badge-ghost badge-sm">Data_Barang</span></td><td>Semua barang + stok hitungan</td><td class="opacity-60 text-xs">Kode, Harga, Sisa_Stok, Status</td></tr>
+                <tr><td><span class="badge badge-ghost badge-sm">Barang_Masuk</span></td><td>Riwayat stok masuk</td><td class="opacity-60 text-xs">No, Tanggal, Supplier, Jumlah</td></tr>
+                <tr><td><span class="badge badge-ghost badge-sm">Penjualan</span></td><td>Semua transaksi</td><td class="opacity-60 text-xs">No_Transaksi, Total, Status</td></tr>
+                <tr><td><span class="badge badge-ghost badge-sm">Detail_Penjualan</span></td><td>Rincian item per transaksi</td><td class="opacity-60 text-xs">No_Transaksi, Kode_Barang, Qty</td></tr>
+                <tr><td><span class="badge badge-ghost badge-sm">Pembayaran_Piutang</span></td><td>Cicilan piutang</td><td class="opacity-60 text-xs">No_Transaksi, Tgl_Bayar, Nominal</td></tr>
+                <tr><td><span class="badge badge-warning badge-sm">Piutang</span></td><td>Rekap belum lunas</td><td class="opacity-60 text-xs">Sisa_Piutang, Status</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="w-full lg:w-[320px] shrink-0">
+          <div class="card bg-primary text-primary-content shadow-lg">
+            <div class="card-body items-center text-center">
+              <div class="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-2xl mb-2"><i class="fa-solid fa-file-excel"></i></div>
+              <h3 class="font-bold">Unduh Backup Sekarang</h3>
+              <p class="text-xs text-white/70">File Excel siap buka di HP / Laptop, bisa di-print atau disimpan di Google Drive.</p>
+              <a href="/backup/export" class="btn btn-secondary w-full mt-3 gap-2"><i class="fa-solid fa-download"></i> Download Excel (.xlsx)</a>
+              <p class="text-[11px] text-white/60 mt-1">Nama file: Backup_Kasir_Sekolah_<%= Date.current.strftime('%Y%m%d') %>.xlsx</p>
+            </div>
+          </div>
+          <div class="alert mt-3 py-2 text-xs">
+            <i class="fa-solid fa-lightbulb text-warning"></i>
+            <span>Tips: backup rutin tiap minggu — simpan di Drive biar aman kalau HP hilang.</span>
+          </div>
+          <div class="flex gap-2 mt-3">
+            <a href="/sales" class="btn btn-sm btn-ghost flex-1 gap-1"><i class="fa-solid fa-receipt"></i> Lihat penjualan</a>
+            <a href="/piutang" class="btn btn-sm btn-ghost flex-1 gap-1"><i class="fa-solid fa-hand-holding-dollar"></i> Lihat piutang</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

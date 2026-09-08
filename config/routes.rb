@@ -80,6 +80,8 @@ Rails.application.routes.draw do
   end
   get "piutang", to: "piutangs#index"
   get "laporan", to: "reports#daily", as: :daily_reports
+  get "backup", to: "backups#index", as: :backup
+  get "backup/export", to: "backups#export", as: :backup_export
   get "welcome_old", to: "public#welcome"
   # root "prototypes#show", page: "home"
   get "home" => "public#home"
