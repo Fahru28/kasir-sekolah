@@ -107,8 +107,18 @@ class ProductsController < ApplicationController
 
   def destroy
     @product = Product.find(params[:id])
+    if @product.sale_items.exists?
+      redirect_to products_path, alert: "Tidak bisa hapus #{@product.name}: masih ada transaksi penjualan yang pakai barang ini (#{@product.sale_items.count} transaksi). Hapus transaksi dulu atau nonaktifkan stok jadi 0." and return
+    end
+    if @product.order_items.exists?
+      redirect_to products_path, alert: "Tidak bisa hapus #{@product.name}: masih ada pesanan online yang pakai barang ini (#{@product.order_items.count} pesanan)." and return
+    end
     @product.destroy
-    redirect_to products_path, notice: "Barang dihapus"
+    if @product.destroyed?
+      redirect_to products_path, notice: "Barang #{@product.name} dihapus"
+    else
+      redirect_to products_path, alert: "Gagal hapus: #{@product.errors.full_messages.join(', ')}"
+    end
   end
 
   private

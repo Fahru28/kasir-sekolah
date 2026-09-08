@@ -26,7 +26,10 @@
                 <td class="text-right font-semibold text-sm"><%= rupiah(p.selling_price) %></td>
                 <td class="text-center"><span class="badge <%= p.low_stock? ? 'badge-warning' : 'badge-ghost' %> badge-sm"><%= p.current_stock %> / min <%= p.min_stock %></span></td>
                 <td><span class="badge badge-sm <%= p.low_stock? ? 'badge-warning' : 'badge-success' %>"><%= p.low_stock? ? 'Menipis' : 'Aman' %></span></td>
-                <td><a href="/products/<%= p.id %>/edit" class="btn btn-ghost btn-xs">Edit</a></td>
+                <td class="flex gap-1">
+                  <a href="/products/<%= p.id %>/edit" class="btn btn-ghost btn-xs">Edit</a>
+                  <%= button_to product_path(p), method: :delete, form: { data: { turbo_confirm: "Hapus #{p.name}? Tidak bisa kalau masih ada penjualan/pesanan yang pakai barang ini." } }, class: "btn btn-ghost btn-xs text-error" do %><i class="fa-solid fa-trash"></i><% end %>
+                </td>
               </tr>
             <% end %>
           </tbody>
