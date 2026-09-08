@@ -97,12 +97,18 @@
         <div class="card-body p-4">
           <h2 class="font-bold"><i class="fa-solid fa-credit-card text-primary mr-1"></i> Pembayaran</h2>
           <%= form_with url: kasir_checkout_path, method: :post, class: "space-y-3 mt-3" do |f| %>
-            <div>
-              <label class="label"><span class="label-text font-medium">Siswa</span></label>
-              <select name="student_id" required class="select select-bordered w-full">
+            <div data-controller="kasir-search">
+              <label class="label"><span class="label-text font-medium">Siswa</span> <span data-kasir-search-target="count" class="label-text-alt opacity-60"><%= @students.size %> siswa</span></label>
+              <div class="relative">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 opacity-40"><i class="fa-solid fa-magnifying-glass text-sm"></i></span>
+                <input type="text" placeholder="Ketik nama / kelas / NIS..." data-kasir-search-target="input" data-action="input->kasir-search#filter keydown->kasir-search#pickFirstOnEnter" class="input input-bordered w-full pl-9 pr-9" autocomplete="off" />
+                <button type="button" data-kasir-search-target="clear" data-action="click->kasir-search#clear" class="hidden absolute right-2 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-circle"><i class="fa-solid fa-xmark"></i></button>
+              </div>
+              <p class="text-[11px] opacity-50 mt-1">Ketik lalu tekan <kbd class="kbd kbd-xs">Enter</kbd> untuk pilih yang pertama</p>
+              <select name="student_id" required data-kasir-search-target="select" class="select select-bordered w-full mt-2">
                 <option value="">— Pilih siswa —</option>
                 <% @students.each do |s| %>
-                  <option value="<%= s.id %>"><%= s.name %> — <%= s.class_name %> (<%= s.code %>)</option>
+                  <option value="<%= s.id %>"><%= s.name %> — <%= s.class_name %> (<%= s.code %> · NIS <%= s.nis %>)</option>
                 <% end %>
               </select>
             </div>
