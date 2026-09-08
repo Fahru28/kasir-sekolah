@@ -78,7 +78,7 @@
                     <tr class="hover">
                       <td><a href="/sales/<%= s.id %>" class="link link-primary font-mono text-xs"><%= s.number %></a></td>
                       <td class="text-sm"><%= s.sale_date %></td>
-                      <td class="text-sm"><%= s.student.name %><br><span class="text-xs opacity-60"><%= s.student.class_name %></span></td>
+                      <td class="text-sm"><%= s.display_name %><br><span class="text-xs opacity-60"><%= s.display_class %></span></td>
                       <td class="font-semibold text-sm"><%= rupiah(s.total_amount) %></td>
                       <td><span class="badge badge-sm <%= s.status == 'Lunas' ? 'badge-success' : 'badge-warning' %>"><%= s.status %></span></td>
                     </tr>

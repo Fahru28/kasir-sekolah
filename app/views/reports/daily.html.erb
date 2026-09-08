@@ -97,7 +97,7 @@
                   <% sales.each do |s| %>
                     <tr class="hover">
                       <td class="font-mono text-xs"><a href="/sales/<%= s.id %>" class="link link-primary"><%= s.number %></a></td>
-                      <td class="text-sm"><%= s.student.name %><br><span class="text-xs opacity-50"><%= s.student.class_name %></span></td>
+                      <td class="text-sm"><%= s.display_name %><br><span class="text-xs opacity-50"><%= s.display_class %></span></td>
                       <td class="text-center text-sm"><%= s.total_items %></td>
                       <td class="text-right font-semibold text-sm"><%= rupiah(s.total_amount) %></td>
                       <td class="text-right text-success text-sm"><%= rupiah(s.profit) %></td>

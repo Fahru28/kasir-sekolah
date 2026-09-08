@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_09_03_103710) do
+ActiveRecord::Schema[7.2].define(version: 2026_09_08_050756) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -424,7 +424,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_03_103710) do
   create_table "sales", force: :cascade do |t|
     t.string "number"
     t.date "sale_date"
-    t.bigint "student_id", null: false
+    t.bigint "student_id"
     t.integer "total_items"
     t.integer "total_amount"
     t.string "payment_method"
@@ -433,6 +433,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_03_103710) do
     t.integer "profit"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "custom_customer_name"
     t.index ["student_id"], name: "index_sales_on_student_id"
   end
 

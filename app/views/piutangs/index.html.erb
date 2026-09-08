@@ -21,7 +21,7 @@
               <tr class="hover <%= s.outstanding == 0 ? 'opacity-50' : '' %>">
                 <td><a href="/sales/<%= s.id %>" class="link link-primary font-mono text-sm"><%= s.number %></a></td>
                 <td class="text-sm"><%= s.sale_date %></td>
-                <td class="text-sm"><%= s.student.name %><br><span class="text-xs opacity-60"><%= s.student.class_name %></span></td>
+                <td class="text-sm"><%= s.display_name %><br><span class="text-xs opacity-60"><%= s.display_class %></span></td>
                 <td class="text-sm"><%= rupiah(s.total_amount) %></td>
                 <td class="text-sm text-success"><%= rupiah(s.debt_payments.sum(:amount)) %></td>
                 <td class="font-bold text-sm <%= s.outstanding > 0 ? 'text-warning' : 'text-success' %>"><%= rupiah(s.outstanding) %></td>

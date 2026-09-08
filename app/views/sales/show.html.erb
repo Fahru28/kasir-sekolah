@@ -47,10 +47,14 @@
     <div class="px-6 sm:px-8 py-4 grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm border-b border-neutral-200">
       <div class="space-y-1.5">
         <p class="text-[11px] tracking-widest font-bold text-neutral-500">TELAH DITERIMA DARI</p>
-        <p class="text-base font-bold"><%= @sale.student.name %></p>
-        <p class="text-xs text-neutral-600">Kelas <b><%= @sale.student.class_name %></b> &nbsp;·&nbsp; NIS <b><%= @sale.student.nis %></b> &nbsp;·&nbsp; ID <%= @sale.student.code %></p>
-        <p class="text-xs text-neutral-600">Wali: <%= @sale.student.guardian_name %> &nbsp;·&nbsp; <%= @sale.student.phone %></p>
-        <p class="text-xs text-neutral-500"><%= @sale.student.address %></p>
+        <p class="text-base font-bold"><%= @sale.display_name %></p>
+        <% if @sale.student.present? %>
+          <p class="text-xs text-neutral-600">Kelas <b><%= @sale.student.class_name %></b> &nbsp;·&nbsp; NIS <b><%= @sale.student.nis %></b> &nbsp;·&nbsp; ID <%= @sale.student.code %></p>
+          <p class="text-xs text-neutral-600">Wali: <%= @sale.student.guardian_name %> &nbsp;·&nbsp; <%= @sale.student.phone %></p>
+          <p class="text-xs text-neutral-500"><%= @sale.student.address %></p>
+        <% else %>
+          <p class="text-xs text-neutral-600">Pembeli umum <span class="badge badge-ghost badge-xs">Custom</span></p>
+        <% end %>
       </div>
       <div class="bg-neutral-900 text-white rounded-xl p-4 flex flex-col justify-center">
         <p class="text-[11px] tracking-widest text-white/60">JUMLAH PEMBAYARAN</p>
@@ -112,7 +116,7 @@
       <div>
         <p class="text-xs text-neutral-500">Penerima</p>
         <div class="h-20"></div>
-        <p class="font-semibold"><%= @sale.student.name %></p>
+        <p class="font-semibold"><%= @sale.display_name %></p>
       </div>
       <div>
         <p class="text-xs text-neutral-500">Rangkasbitung, <%= l(@sale.sale_date, format: :long) rescue @sale.sale_date.strftime("%d %B %Y") %></p>

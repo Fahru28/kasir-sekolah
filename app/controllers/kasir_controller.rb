@@ -51,7 +51,15 @@ class KasirController < ApplicationController
     if cart.empty?
       redirect_to kasir_path, alert: "Keranjang kosong!" and return
     end
-    student = Student.find(params[:student_id])
+    custom_name = params[:custom_customer_name].to_s.strip
+    student = params[:student_id].present? ? Student.find_by(id: params[:student_id]) : nil
+    if student.nil? && custom_name.blank?
+      redirect_to kasir_path, alert: "Pilih siswa atau isi nama pembeli!" and return
+    end
+    if student.present? && custom_name.present?
+      # kalau pilih siswa, custom dikosongkan biar konsisten
+      custom_name = nil
+    end
     payment_method = params[:payment_method]
     amount_paid = params[:amount_paid].to_i
 
@@ -73,6 +81,7 @@ class KasirController < ApplicationController
       number: number,
       sale_date: Date.current,
       student: student,
+      custom_customer_name: custom_name,
       total_items: total_items,
       total_amount: total,
       payment_method: payment_method,

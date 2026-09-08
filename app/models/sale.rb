@@ -1,10 +1,19 @@
 class Sale < ApplicationRecord
-  belongs_to :student
+  belongs_to :student, optional: true
   has_many :sale_items, dependent: :destroy
   has_many :debt_payments, dependent: :destroy
   accepts_nested_attributes_for :sale_items, allow_destroy: true
 
   validates :number, presence: true, uniqueness: true
+  validate :student_or_custom_name_present
+
+  def display_name
+    custom_customer_name.presence || student&.name || "Umum"
+  end
+
+  def display_class
+    student&.class_name.presence || "-"
+  end
 
   def total_paid
     debt_payments.sum(:amount).to_i + (amount_paid.to_i) # amount_paid for non-credit initial; for Piutang it starts 0
@@ -26,5 +35,13 @@ class Sale < ApplicationRecord
 
   def fully_paid?
     outstanding <= 0
+  end
+
+  private
+
+  def student_or_custom_name_present
+    if student_id.blank? && custom_customer_name.blank?
+      errors.add(:base, "Pilih siswa atau isi nama pembeli")
+    end
   end
 end
