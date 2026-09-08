@@ -16,14 +16,31 @@
   <% if alert %><div class="alert alert-warning mb-4 rounded-xl"><span><%= alert %></span></div><% end %>
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <div class="lg:col-span-2">
-      <h2 class="font-bold mb-3"><i class="fa-solid fa-store mr-2 text-emerald-600"></i>Katalog Barang</h2>
+    <div class="lg:col-span-2" data-controller="pesan-search" data-pesan-search-initial-value="8">
+      <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
+        <h2 class="font-bold"><i class="fa-solid fa-store mr-2 text-emerald-600"></i>Katalog Barang</h2>
+        <span data-pesan-search-target="count" class="text-xs opacity-60"></span>
+      </div>
+
+      <% categories = ["Semua"] + @products.map(&:category).compact.uniq.sort %>
+      <div class="flex gap-1.5 overflow-x-auto pb-2 mb-3 scrollbar-thin">
+        <% categories.each do |cat| %>
+          <button type="button" data-pesan-search-target="category" data-category="<%= cat %>" data-action="click->pesan-search#selectCategory" class="btn btn-xs rounded-full whitespace-nowrap <%= cat == 'Semua' ? 'btn-primary' : 'btn-ghost border' %>"><%= cat %></button>
+        <% end %>
+      </div>
+
+      <div class="relative mb-3">
+        <span class="absolute left-3 top-1/2 -translate-y-1/2 opacity-40"><i class="fa-solid fa-magnifying-glass text-sm"></i></span>
+        <input type="text" data-pesan-search-target="input" data-action="input->pesan-search#filter" placeholder="Cari barang — ketik nama / kategori, contoh: buku, susu, seragam..." class="input input-bordered w-full pl-9 pr-9 rounded-xl" autocomplete="off" />
+        <button type="button" data-pesan-search-target="clear" data-action="click->pesan-search#clear" class="hidden absolute right-2 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-circle"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
       <% if @products.empty? %>
         <div class="alert rounded-xl">Belum ada barang</div>
       <% else %>
-        <div class="grid grid-cols-2 gap-3">
+        <div data-pesan-search-target="grid" class="grid grid-cols-2 gap-3">
           <% @products.each do |p| %>
-            <div class="card bg-base-100 shadow-sm border border-base-200 rounded-2xl overflow-hidden">
+            <div data-pesan-search-target="card" data-name="<%= "#{p.name} #{p.category} #{p.code}" %>" data-category="<%= p.category %>" class="card bg-base-100 shadow-sm border border-base-200 rounded-2xl overflow-hidden transition">
               <div class="h-24 bg-gradient-to-br from-emerald-50 to-teal-50 flex items-center justify-center">
                 <div class="w-11 h-11 rounded-xl bg-white shadow flex items-center justify-center text-emerald-500">
                   <% icon = case p.category; when "Makanan" then "fa-burger"; when "Minuman" then "fa-bottle-water"; when "Seragam" then "fa-shirt"; when "Alat Tulis" then "fa-pen-ruler"; else "fa-box"; end %>
@@ -45,6 +62,14 @@
             </div>
           <% end %>
         </div>
+        <div data-pesan-search-target="empty" class="hidden text-center py-10 border-2 border-dashed rounded-2xl mt-3">
+          <i class="fa-solid fa-magnifying-glass text-2xl opacity-20"></i>
+          <p class="text-sm font-medium mt-2">Tidak ada barang yang cocok</p>
+          <p class="text-xs opacity-60">Coba kata lain atau pilih kategori Semua</p>
+          <button type="button" data-action="click->pesan-search#clear" class="btn btn-sm btn-ghost mt-2">Hapus pencarian</button>
+        </div>
+        <button type="button" data-pesan-search-target="loadMore" data-action="click->pesan-search#showMore" class="hidden btn btn-outline w-full mt-3 rounded-xl gap-2"><i class="fa-solid fa-chevron-down"></i> Tampilkan <span data-role="remaining"></span> lagi</button>
+        <p class="text-[11px] opacity-40 text-center mt-2">Awalnya tampil 8 saja biar tidak scroll panjang — pakai Cari atau kategori untuk filter cepat</p>
       <% end %>
     </div>
 
