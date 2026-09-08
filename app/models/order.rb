@@ -1,5 +1,7 @@
 class Order < ApplicationRecord
   belongs_to :sale, optional: true
+  # FK di DB masih restrict; nullify di controller saat hapus sale (biar tidak error PG)
+  # Alternatif: ganti FK jadi nullify di migrasi, tapi cukup handle di controller untuk sekarang
   has_many :order_items, dependent: :destroy
   accepts_nested_attributes_for :order_items, allow_destroy: true
 
