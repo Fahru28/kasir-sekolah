@@ -26,14 +26,11 @@
     </div>
   </div>
 
-  <!-- DEBUG: darimana total itu - hapus setelah beres -->
-  <div class="alert bg-amber-50 border border-amber-200 text-amber-900 mb-4 text-xs">
-    <i class="fa-solid fa-bug"></i>
+  <!-- DEBUG: hapus setelah verifikasi 78rb -->
+  <div class="alert bg-success/10 border border-success/20 text-success mb-4 text-xs">
+    <i class="fa-solid fa-check"></i>
     <div>
-      <b>Debug:</b> Periode <b><%= @from %> → <%= @to %></b> · <b><%= @total_trx %> trx</b> · @total_omzet = <b><%= rupiah(@total_omzet) %></b> (SUM total_amount WHERE sale_date <%= @from %>..<%= @to %>) · cek DB tanpa filter: <%= rupiah(Sale.sum(:total_amount)) %> (<%= Sale.count %> trx) · server: <%= Date.current %> · code ver: 8af7ff2
-      <% if @sales.any? %>
-        <br>Yang dijumlah: <span class="font-mono"><%= @sales.map { |s| "#{s.number}:#{s.total_amount}" }.join(" + ") %> = <%= @total_omzet %></span>
-      <% end %>
+      <b>Fix sudah dipasang:</b> Periode <b><%= @from %> → <%= @to %></b> · <b><%= @total_trx %> trx</b> · @total_omzet = <b><%= rupiah(@total_omzet) %></b> (Ruby sum, tidak dobel) · DB SUM mentah: <%= rupiah(Sale.sum(:total_amount)) %> · manual: <span class="font-mono"><%= @sales.map { |s| "#{s.number}:#{s.total_amount}" }.join(" + ") %> = <%= @sales.sum { |s| s.total_amount.to_i } %></span>
     </div>
   </div>
 
