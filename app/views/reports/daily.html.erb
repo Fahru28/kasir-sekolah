@@ -68,41 +68,6 @@
     </div>
   </div>
 
-  <!-- Inline rincian omzet: langsung terlihat darimana 300rb itu -->
-  <div class="card bg-base-100 shadow border border-primary/20 mb-6">
-    <div class="card-body p-4">
-      <div class="flex flex-wrap justify-between items-center gap-2">
-        <h3 class="font-bold text-sm flex items-center gap-2"><i class="fa-solid fa-calculator text-primary"></i> Dari mana angka <span class="badge badge-primary font-mono"><%= rupiah(@total_omzet) %></span> itu? <span class="font-normal opacity-60 hidden sm:inline">— klik baris untuk lihat kwitansi</span></h3>
-        <span class="text-xs opacity-60">Rumus: jumlah <b>Total</b> semua transaksi di periode <%= @from %> → <%= @to %></span>
-      </div>
-      <% if @sales.any? %>
-        <div class="overflow-x-auto mt-3 border rounded-xl">
-          <table class="table table-xs">
-            <thead class="bg-base-200"><tr><th>Tanggal</th><th>No</th><th>Pembeli</th><th>Item</th><th class="text-right">Total</th><th class="text-right">Laba</th><th>Bayar</th><th></th></tr></thead>
-            <tbody>
-              <% @sales.each do |s| %>
-                <tr class="hover">
-                  <td class="text-xs whitespace-nowrap"><%= s.sale_date %></td>
-                  <td class="font-mono text-xs"><a href="/sales/<%= s.id %>" class="link link-primary"><%= s.number %></a></td>
-                  <td class="text-xs"><%= s.display_name %><br><span class="opacity-50"><%= s.display_class %></span></td>
-                  <td class="text-center text-xs"><%= s.total_items %></td>
-                  <td class="text-right text-xs font-bold"><%= rupiah(s.total_amount) %></td>
-                  <td class="text-right text-xs text-success"><%= rupiah(s.profit) %></td>
-                  <td><span class="badge badge-ghost badge-xs"><%= s.payment_method %></span></td>
-                  <td><a href="/sales/<%= s.id %>" class="btn btn-ghost btn-xs">Detail</a></td>
-                </tr>
-              <% end %>
-            </tbody>
-            <tfoot class="bg-base-200 font-bold"><tr><td colspan="4" class="text-right text-xs">Jumlah ( <%= @total_trx %> transaksi )</td><td class="text-right text-primary text-xs"><%= rupiah(@total_omzet) %></td><td class="text-right text-success text-xs"><%= rupiah(@total_profit) %></td><td colspan="2" class="text-xs opacity-60">harus = <span class="font-mono"><%= @sales.map(&:total_amount).join(" + ") %></span></td></tr></tfoot>
-          </table>
-        </div>
-        <p class="text-xs opacity-60 mt-2"><i class="fa-solid fa-lightbulb text-warning mr-1"></i>Kalau ada transaksi yang dobel / salah, klik <b>Detail → Hapus</b> di baris itu — angka di atas langsung berkurang. Atau ubah filter <b>Dari–Sampai</b> kalau periodenya kepanjangan.</p>
-      <% else %>
-        <p class="text-sm opacity-60 text-center py-6">Tidak ada transaksi di periode ini — coba ubah filter tanggal.</p>
-      <% end %>
-    </div>
-  </div>
-
   <!-- Per-day breakdown -->
   <% if @per_day.any? %>
     <div class="space-y-4">
