@@ -28,20 +28,20 @@
 
   <!-- Summary stats -->
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-    <div class="card bg-base-100 shadow border border-base-200">
+    <label for="omzet-modal" class="card bg-base-100 shadow border border-primary/30 hover:border-primary hover:shadow-lg transition cursor-pointer group">
       <div class="card-body p-4">
-        <p class="text-xs opacity-60">Total Omzet</p>
-        <p class="text-xl font-black text-primary"><%= rupiah(@total_omzet) %></p>
+        <p class="text-xs opacity-60 flex items-center justify-between">Total Omzet <span class="badge badge-primary badge-sm gap-1 opacity-0 group-hover:opacity-100 transition"><i class="fa-solid fa-magnifying-glass text-[10px]"></i> klik rincian</span></p>
+        <p class="text-xl font-black text-primary flex items-center gap-1"><%= rupiah(@total_omzet) %> <i class="fa-solid fa-chevron-right text-xs opacity-30 group-hover:opacity-100 group-hover:translate-x-0.5 transition"></i></p>
         <p class="text-xs opacity-50"><%= @total_trx %> transaksi · <%= @total_items %> item</p>
       </div>
-    </div>
-    <div class="card bg-base-100 shadow border border-success/20">
+    </label>
+    <label for="profit-modal" class="card bg-base-100 shadow border border-success/30 hover:border-success hover:shadow-lg transition cursor-pointer group">
       <div class="card-body p-4">
-        <p class="text-xs opacity-60">Total Keuntungan</p>
-        <p class="text-xl font-black text-success"><%= rupiah(@total_profit) %></p>
+        <p class="text-xs opacity-60 flex items-center justify-between">Total Keuntungan <span class="badge badge-success badge-sm gap-1 opacity-0 group-hover:opacity-100 transition"><i class="fa-solid fa-magnifying-glass text-[10px]"></i> klik rincian</span></p>
+        <p class="text-xl font-black text-success flex items-center gap-1"><%= rupiah(@total_profit) %> <i class="fa-solid fa-chevron-right text-xs opacity-30 group-hover:opacity-100 group-hover:translate-x-0.5 transition"></i></p>
         <p class="text-xs opacity-50">Laba kotor periode ini</p>
       </div>
-    </div>
+    </label>
     <div class="card bg-base-100 shadow border border-base-200">
       <div class="card-body p-4">
         <p class="text-xs opacity-60">Per Metode Bayar</p>
@@ -122,6 +122,79 @@
       </div>
     </div>
   <% end %>
+
+  <!-- Omzet detail modal (DaisyUI modal-toggle) -->
+  <input type="checkbox" id="omzet-modal" class="modal-toggle" />
+  <div class="modal">
+    <div class="modal-box max-w-3xl">
+      <h3 class="font-bold text-lg flex items-center gap-2"><i class="fa-solid fa-receipt text-primary"></i> Rincian Total Omzet <span class="badge badge-ghost font-mono"><%= rupiah(@total_omzet) %></span></h3>
+      <p class="text-xs opacity-60 mt-1">Periode <%= @from %> — <%= @to %> · <%= @total_trx %> transaksi · sumber: tabel Sale</p>
+      <div class="divider my-3"></div>
+      <% if @sales.any? %>
+        <div class="overflow-x-auto max-h-[60vh]">
+          <table class="table table-xs">
+            <thead><tr><th>Tanggal</th><th>No</th><th>Pembeli</th><th class="text-right">Total</th><th></th></tr></thead>
+            <tbody>
+              <% @sales.each do |s| %>
+                <tr class="hover">
+                  <td class="text-xs whitespace-nowrap"><%= s.sale_date %></td>
+                  <td class="font-mono text-xs"><a href="/sales/<%= s.id %>" class="link link-primary"><%= s.number %></a></td>
+                  <td class="text-xs"><%= s.display_name %></td>
+                  <td class="text-right text-xs font-semibold"><%= rupiah(s.total_amount) %></td>
+                  <td><a href="/sales/<%= s.id %>" class="btn btn-ghost btn-xs">Detail</a></td>
+                </tr>
+              <% end %>
+            </tbody>
+            <tfoot><tr><th colspan="3" class="text-right">Total Omzet</th><th class="text-right text-primary"><%= rupiah(@total_omzet) %></th><th></th></tr></tfoot>
+          </table>
+        </div>
+      <% else %>
+        <p class="text-sm opacity-60 text-center py-6">Tidak ada transaksi di periode ini.</p>
+      <% end %>
+      <div class="modal-action">
+        <label for="omzet-modal" class="btn btn-sm">Tutup</label>
+        <a href="/sales" class="btn btn-primary btn-sm gap-1"><i class="fa-solid fa-list"></i> Lihat Riwayat</a>
+      </div>
+    </div>
+    <label class="modal-backdrop" for="omzet-modal">Close</label>
+  </div>
+
+  <!-- Profit detail modal -->
+  <input type="checkbox" id="profit-modal" class="modal-toggle" />
+  <div class="modal">
+    <div class="modal-box max-w-3xl">
+      <h3 class="font-bold text-lg flex items-center gap-2"><i class="fa-solid fa-coins text-success"></i> Rincian Total Keuntungan <span class="badge badge-ghost font-mono"><%= rupiah(@total_profit) %></span></h3>
+      <p class="text-xs opacity-60 mt-1">Periode <%= @from %> — <%= @to %> · <%= @total_trx %> transaksi · laba = jual − modal per item</p>
+      <div class="divider my-3"></div>
+      <% if @sales.any? %>
+        <div class="overflow-x-auto max-h-[60vh]">
+          <table class="table table-xs">
+            <thead><tr><th>Tanggal</th><th>No</th><th>Pembeli</th><th class="text-right">Omzet</th><th class="text-right">Laba</th><th></th></tr></thead>
+            <tbody>
+              <% @sales.each do |s| %>
+                <tr class="hover">
+                  <td class="text-xs whitespace-nowrap"><%= s.sale_date %></td>
+                  <td class="font-mono text-xs"><a href="/sales/<%= s.id %>" class="link link-success"><%= s.number %></a></td>
+                  <td class="text-xs"><%= s.display_name %></td>
+                  <td class="text-right text-xs"><%= rupiah(s.total_amount) %></td>
+                  <td class="text-right text-xs font-bold text-success"><%= rupiah(s.profit) %></td>
+                  <td><a href="/sales/<%= s.id %>" class="btn btn-ghost btn-xs">Detail</a></td>
+                </tr>
+              <% end %>
+            </tbody>
+            <tfoot><tr><th colspan="3" class="text-right">Total</th><th class="text-right text-primary"><%= rupiah(@total_omzet) %></th><th class="text-right text-success"><%= rupiah(@total_profit) %></th><th></th></tr></tfoot>
+          </table>
+        </div>
+      <% else %>
+        <p class="text-sm opacity-60 text-center py-6">Tidak ada transaksi di periode ini.</p>
+      <% end %>
+      <div class="modal-action">
+        <label for="profit-modal" class="btn btn-sm">Tutup</label>
+        <a href="/sales" class="btn btn-success btn-sm gap-1"><i class="fa-solid fa-list"></i> Lihat Riwayat</a>
+      </div>
+    </div>
+    <label class="modal-backdrop" for="profit-modal">Close</label>
+  </div>
 
   <!-- Quick link back on dashboard -->
   <div class="mt-6 print:hidden">
