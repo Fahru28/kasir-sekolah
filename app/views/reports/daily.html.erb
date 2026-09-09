@@ -26,14 +26,6 @@
     </div>
   </div>
 
-  <!-- DEBUG: hapus setelah verifikasi 78rb -->
-  <div class="alert bg-success/10 border border-success/20 text-success mb-4 text-xs">
-    <i class="fa-solid fa-check"></i>
-    <div>
-      <b>Fix sudah dipasang:</b> Periode <b><%= @from %> → <%= @to %></b> · <b><%= @total_trx %> trx</b> · @total_omzet = <b><%= rupiah(@total_omzet) %></b> (Ruby sum, tidak dobel) · DB SUM mentah: <%= rupiah(Sale.sum(:total_amount)) %> · manual: <span class="font-mono"><%= @sales.map { |s| "#{s.number}:#{s.total_amount}" }.join(" + ") %> = <%= @sales.sum { |s| s.total_amount.to_i } %></span>
-    </div>
-  </div>
-
   <!-- Summary stats -->
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
     <label for="omzet-modal" class="card bg-base-100 shadow border border-primary/30 hover:border-primary hover:shadow-lg transition cursor-pointer group">
