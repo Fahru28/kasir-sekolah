@@ -26,6 +26,17 @@
     </div>
   </div>
 
+  <!-- DEBUG: darimana total itu - hapus setelah beres -->
+  <div class="alert bg-amber-50 border border-amber-200 text-amber-900 mb-4 text-xs">
+    <i class="fa-solid fa-bug"></i>
+    <div>
+      <b>Debug:</b> Periode <b><%= @from %> → <%= @to %></b> · <b><%= @total_trx %> trx</b> · @total_omzet = <b><%= rupiah(@total_omzet) %></b> (SUM total_amount WHERE sale_date <%= @from %>..<%= @to %>) · cek DB tanpa filter: <%= rupiah(Sale.sum(:total_amount)) %> (<%= Sale.count %> trx) · server: <%= Date.current %> · code ver: 8af7ff2
+      <% if @sales.any? %>
+        <br>Yang dijumlah: <span class="font-mono"><%= @sales.map { |s| "#{s.number}:#{s.total_amount}" }.join(" + ") %> = <%= @total_omzet %></span>
+      <% end %>
+    </div>
+  </div>
+
   <!-- Summary stats -->
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
     <label for="omzet-modal" class="card bg-base-100 shadow border border-primary/30 hover:border-primary hover:shadow-lg transition cursor-pointer group">
