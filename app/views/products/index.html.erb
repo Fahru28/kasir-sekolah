@@ -17,15 +17,16 @@
           <thead><tr><th>Kode</th><th>Nama</th><th>Kategori</th><th>Satuan</th><th class="text-right">Modal</th><th class="text-right">Jual</th><th class="text-center">Stok</th><th>Status</th><th></th></tr></thead>
           <tbody>
             <% @products.each do |p| %>
-              <tr class="hover <%= p.low_stock? ? 'bg-warning/5' : '' %>">
+              <% _low = p.low_stock?; _stok = p.current_stock %>
+              <tr class="hover <%= _low ? 'bg-warning/5' : '' %>">
                 <td class="font-mono text-xs"><%= p.code %></td>
                 <td class="font-medium text-sm"><%= p.name %></td>
                 <td><span class="badge badge-ghost badge-sm"><%= p.category %></span></td>
                 <td class="text-xs"><%= p.unit %></td>
                 <td class="text-right text-sm"><%= rupiah(p.cost_price) %></td>
                 <td class="text-right font-semibold text-sm"><%= rupiah(p.selling_price) %></td>
-                <td class="text-center"><span class="badge <%= p.low_stock? ? 'badge-warning' : 'badge-ghost' %> badge-sm"><%= p.current_stock %> / min <%= p.min_stock %></span></td>
-                <td><span class="badge badge-sm <%= p.low_stock? ? 'badge-warning' : 'badge-success' %>"><%= p.low_stock? ? 'Menipis' : 'Aman' %></span></td>
+                <td class="text-center"><span class="badge <%= _low ? 'badge-warning' : 'badge-ghost' %> badge-sm"><%= _stok %> / min <%= p.min_stock %></span></td>
+                <td><span class="badge badge-sm <%= _low ? 'badge-warning' : 'badge-success' %>"><%= _low ? 'Menipis' : 'Aman' %></span></td>
                 <td class="flex gap-1">
                   <a href="/products/<%= p.id %>/edit" class="btn btn-ghost btn-xs">Edit</a>
                   <%= button_to product_path(p), method: :delete, form: { data: { turbo_confirm: "Hapus #{p.name}? Tidak bisa kalau masih ada penjualan/pesanan yang pakai barang ini." } }, class: "btn btn-ghost btn-xs text-error" do %><i class="fa-solid fa-trash"></i><% end %>

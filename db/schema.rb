@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_09_08_050756) do
+ActiveRecord::Schema[7.2].define(version: 2026_09_10_025832) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -96,6 +96,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_08_050756) do
     t.string "note"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["payment_date"], name: "index_debt_payments_on_payment_date"
     t.index ["sale_id"], name: "index_debt_payments_on_sale_id"
   end
 
@@ -392,6 +393,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_08_050756) do
     t.datetime "updated_at", null: false
     t.bigint "sale_id"
     t.index ["sale_id"], name: "index_orders_on_sale_id"
+    t.index ["status"], name: "index_orders_on_status"
   end
 
   create_table "products", force: :cascade do |t|
@@ -405,6 +407,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_08_050756) do
     t.integer "min_stock"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["code"], name: "index_products_on_code", unique: true
   end
 
   create_table "sale_items", force: :cascade do |t|
@@ -434,6 +437,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_08_050756) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "custom_customer_name"
+    t.index ["number"], name: "index_sales_on_number", unique: true
+    t.index ["payment_method"], name: "index_sales_on_payment_method"
+    t.index ["sale_date"], name: "index_sales_on_sale_date"
+    t.index ["status"], name: "index_sales_on_status"
     t.index ["student_id"], name: "index_sales_on_student_id"
   end
 
@@ -447,6 +454,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_08_050756) do
     t.string "note"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["entry_date"], name: "index_stock_entries_on_entry_date"
     t.index ["product_id"], name: "index_stock_entries_on_product_id"
   end
 
@@ -461,6 +469,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_08_050756) do
     t.boolean "active"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["code"], name: "index_students_on_code", unique: true
   end
 
   create_table "users", force: :cascade do |t|
