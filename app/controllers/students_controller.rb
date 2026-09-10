@@ -1,6 +1,6 @@
 class StudentsController < ApplicationController
   def index
-    @students = Student.order(:name)
+    @students = Student.order(:name).limit(300)
   end
 
   def template
@@ -99,7 +99,7 @@ class StudentsController < ApplicationController
 
   def show
     @student = Student.find(params[:id])
-    @sales = @student.sales.order(sale_date: :desc)
+    @sales = @student.sales.includes(:debt_payments).order(sale_date: :desc).limit(100)
   end
 
   def new

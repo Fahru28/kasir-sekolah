@@ -1,9 +1,9 @@
 class KasirController < ApplicationController
   def index
     @students = Student.order(:name)
-    @products = Product.order(:name)
+    @products = Product.with_stock_fast.order(:name)
     @cart = session[:kasir_cart] || []
-    @pending_orders = Order.includes(order_items: :product).where(status: %w[Menunggu Siap_Diambil]).order(created_at: :desc)
+    @pending_orders = Order.includes(order_items: :product).where(status: %w[Menunggu Siap_Diambil]).order(created_at: :desc).limit(20)
   end
 
   def load_order

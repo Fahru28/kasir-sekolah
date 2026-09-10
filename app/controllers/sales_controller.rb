@@ -1,6 +1,6 @@
 class SalesController < ApplicationController
   def index
-    @sales = Sale.includes(:student).order(sale_date: :desc)
+    @sales = Sale.includes(:student).order(sale_date: :desc).limit(200)
   end
 
   def show

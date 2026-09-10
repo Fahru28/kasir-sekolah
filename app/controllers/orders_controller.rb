@@ -68,7 +68,7 @@ class OrdersController < ApplicationController
 
   private
     def base_scope
-      Order.all
+      Order.includes(order_items: :product)
     end
 
     def set_order

@@ -70,9 +70,10 @@ class PesanController < ApplicationController
       total_amount: 0
     )
 
+    products_by_id = Product.where(id: cart.keys).index_by { |p| p.id.to_s }
     total = 0
     cart.each do |prod_id, qty|
-      prod = Product.find_by(id: prod_id)
+      prod = products_by_id[prod_id.to_s]
       next unless prod
       price = prod.selling_price.to_i
       subtotal = price * qty.to_i
@@ -175,6 +176,6 @@ class PesanController < ApplicationController
   private
 
   def load_products
-    @products = Product.order(:name)
+    @products = Product.with_stock_fast.order(:name)
   end
 end

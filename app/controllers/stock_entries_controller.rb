@@ -1,7 +1,7 @@
 class StockEntriesController < ApplicationController
   def index
-    @entries = StockEntry.includes(:product).order(entry_date: :desc)
-    @products = Product.order(:name)
+    @entries = StockEntry.includes(:product).order(entry_date: :desc).limit(200)
+    @products = Product.with_stock_fast.order(:name)
   end
 
   def template
@@ -85,8 +85,8 @@ class StockEntriesController < ApplicationController
     if @entry.save
       redirect_to stock_entries_path, notice: "Stok masuk dicatat"
     else
-      @entries = StockEntry.includes(:product).order(entry_date: :desc)
-      @products = Product.order(:name)
+      @entries = StockEntry.includes(:product).order(entry_date: :desc).limit(200)
+      @products = Product.with_stock_fast.order(:name)
       render :index, status: :unprocessable_entity
     end
   end
