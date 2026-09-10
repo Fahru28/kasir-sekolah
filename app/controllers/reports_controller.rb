@@ -20,6 +20,24 @@ class ReportsController < ApplicationController
     @top_products = SaleItem.joins(:sale).where(sales: { sale_date: @from..@to })
                             .joins(:product).group("products.name").sum(:quantity)
                             .sort_by { |_, q| -q }.first(5)
+
+    # Pisah makanan/minuman vs barang (untuk ringkasan cetak & layar)
+    all_items = SaleItem.joins(:sale).where(sales: { sale_date: @from..@to }).joins(:product)
+    makanan_cats = %w[Makanan Minuman]
+    @by_category = {
+      makanan: { qty: 0, omzet: 0, profit: 0 },
+      barang: { qty: 0, omzet: 0, profit: 0 }
+    }
+    all_items.includes(:product).find_each do |si|
+      cat = si.product.category.to_s.strip
+      key = makanan_cats.include?(cat) ? :makanan : :barang
+      @by_category[key][:qty] += si.quantity.to_i
+      @by_category[key][:omzet] += si.subtotal.to_i
+      @by_category[key][:profit] += si.profit.to_i
+    end
+    # Top per kategori (untuk insight)
+    @top_makanan = SaleItem.joins(:sale).where(sales: { sale_date: @from..@to }).joins(:product).where(products: { category: makanan_cats }).group("products.name").sum(:quantity).sort_by { |_, q| -q }.first(5)
+    @top_barang = SaleItem.joins(:sale).where(sales: { sale_date: @from..@to }).joins(:product).where.not(products: { category: makanan_cats }).group("products.name").sum(:quantity).sort_by { |_, q| -q }.first(5)
   rescue ArgumentError
     redirect_to daily_reports_path, alert: "Format tanggal tidak valid"
   end

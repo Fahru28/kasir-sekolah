@@ -128,6 +128,92 @@
     </div>
   </div>
 
+  <!-- PISAH KATEGORI: Makanan vs Barang -->
+  <div class="hidden print:block mb-6">
+    <h3 class="font-bold text-sm mb-2">Rincian per Kategori</h3>
+    <table class="w-full text-sm border-collapse">
+      <thead>
+        <tr class="bg-base-300">
+          <th class="text-left p-2 border">Kategori</th>
+          <th class="text-center p-2 border">Qty Terjual</th>
+          <th class="text-right p-2 border">Omzet</th>
+          <th class="text-right p-2 border">Laba</th>
+          <th class="text-left p-2 border">Top Item</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="p-2 border font-semibold"><i class="fa-solid fa-utensils text-xs mr-1"></i> Makanan & Minuman</td>
+          <td class="p-2 border text-center"><%= @by_category[:makanan][:qty] %> item</td>
+          <td class="p-2 border text-right"><%= rupiah(@by_category[:makanan][:omzet]) %></td>
+          <td class="p-2 border text-right"><%= rupiah(@by_category[:makanan][:profit]) %></td>
+          <td class="p-2 border text-xs"><%= @top_makanan.any? ? @top_makanan.map { |n,q| "#{n} (#{q})" }.join(", ") : "—" %></td>
+        </tr>
+        <tr>
+          <td class="p-2 border font-semibold"><i class="fa-solid fa-box text-xs mr-1"></i> Barang (ATK, Seragam, dll)</td>
+          <td class="p-2 border text-center"><%= @by_category[:barang][:qty] %> item</td>
+          <td class="p-2 border text-right"><%= rupiah(@by_category[:barang][:omzet]) %></td>
+          <td class="p-2 border text-right"><%= rupiah(@by_category[:barang][:profit]) %></td>
+          <td class="p-2 border text-xs"><%= @top_barang.any? ? @top_barang.map { |n,q| "#{n} (#{q})" }.join(", ") : "—" %></td>
+        </tr>
+        <tr class="font-bold bg-base-200">
+          <td class="p-2 border">Total</td>
+          <td class="p-2 border text-center"><%= @by_category[:makanan][:qty] + @by_category[:barang][:qty] %> item</td>
+          <td class="p-2 border text-right"><%= rupiah(@by_category[:makanan][:omzet] + @by_category[:barang][:omzet]) %></td>
+          <td class="p-2 border text-right"><%= rupiah(@by_category[:makanan][:profit] + @by_category[:barang][:profit]) %></td>
+          <td class="p-2 border text-xs opacity-60">gabungan</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 no-print">
+    <div class="card bg-base-100 shadow border border-orange-200">
+      <div class="card-body p-4">
+        <div class="flex justify-between items-start">
+          <h3 class="font-bold text-sm flex items-center gap-2"><span class="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center text-orange-600"><i class="fa-solid fa-utensils text-xs"></i></span> Makanan & Minuman</h3>
+          <span class="badge badge-ghost badge-sm"><%= @by_category[:makanan][:qty] %> item</span>
+        </div>
+        <div class="grid grid-cols-2 gap-3 mt-3 text-sm">
+          <div><p class="text-xs opacity-60">Omzet</p><p class="font-bold"><%= rupiah(@by_category[:makanan][:omzet]) %></p></div>
+          <div><p class="text-xs opacity-60">Laba</p><p class="font-bold text-success"><%= rupiah(@by_category[:makanan][:profit]) %></p></div>
+        </div>
+        <% if @top_makanan.any? %>
+          <p class="text-xs opacity-60 mt-3">Terlaris:</p>
+          <ul class="text-xs space-y-0.5">
+            <% @top_makanan.each do |name, qty| %>
+              <li class="flex justify-between"><span class="truncate pr-2"><%= name %></span><span class="badge badge-ghost badge-xs"><%= qty %></span></li>
+            <% end %>
+          </ul>
+        <% else %>
+          <p class="text-xs opacity-50 mt-3">Belum ada penjualan makanan/minuman</p>
+        <% end %>
+      </div>
+    </div>
+    <div class="card bg-base-100 shadow border border-sky-200">
+      <div class="card-body p-4">
+        <div class="flex justify-between items-start">
+          <h3 class="font-bold text-sm flex items-center gap-2"><span class="w-8 h-8 rounded-lg bg-sky-100 flex items-center justify-center text-sky-600"><i class="fa-solid fa-box text-xs"></i></span> Barang (ATK / Seragam / dll)</h3>
+          <span class="badge badge-ghost badge-sm"><%= @by_category[:barang][:qty] %> item</span>
+        </div>
+        <div class="grid grid-cols-2 gap-3 mt-3 text-sm">
+          <div><p class="text-xs opacity-60">Omzet</p><p class="font-bold"><%= rupiah(@by_category[:barang][:omzet]) %></p></div>
+          <div><p class="text-xs opacity-60">Laba</p><p class="font-bold text-success"><%= rupiah(@by_category[:barang][:profit]) %></p></div>
+        </div>
+        <% if @top_barang.any? %>
+          <p class="text-xs opacity-60 mt-3">Terlaris:</p>
+          <ul class="text-xs space-y-0.5">
+            <% @top_barang.each do |name, qty| %>
+              <li class="flex justify-between"><span class="truncate pr-2"><%= name %></span><span class="badge badge-ghost badge-xs"><%= qty %></span></li>
+            <% end %>
+          </ul>
+        <% else %>
+          <p class="text-xs opacity-50 mt-3">Belum ada penjualan barang</p>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
   <!-- Per-day breakdown — cetak: header hari tetap ikut, tabel rapi -->
   <% if @per_day.any? %>
     <div class="space-y-4">
