@@ -43,14 +43,14 @@
         </div>
       </div>
     </div>
-    <div class="card bg-base-100 shadow-xl border <%= @low_stock.any? ? 'border-warning' : 'border-base-200' %>">
+    <div class="card bg-base-100 shadow-xl border <%= @low_stock_count.to_i > 0 ? 'border-warning' : 'border-base-200' %>">
       <div class="card-body p-5">
         <div class="flex justify-between items-start">
           <div>
             <p class="text-sm text-base-content/60">Stok Menipis</p>
-            <p class="text-2xl font-bold mt-1 <%= @low_stock.any? ? 'text-error' : '' %>"><%= @low_stock.size %> barang</p>
-            <% if @low_stock.any? %>
-              <p class="text-xs text-base-content/60"><%= @low_stock.map(&:name).first(2).join(", ") %></p>
+            <p class="text-2xl font-bold mt-1 <%= @low_stock_count.to_i > 0 ? 'text-error' : '' %>"><%= @low_stock_count.to_i %> barang</p>
+            <% if @low_stock_count.to_i > 0 %>
+              <p class="text-xs text-base-content/60"><%= @low_stock.map(&:name).first(2).join(", ") %><% if @low_stock_has_more %> +<%= @low_stock_count - 2 %> lagi<% end %></p>
             <% else %>
               <p class="text-xs text-success">Semua aman</p>
             <% end %>
@@ -151,7 +151,10 @@
 
       <div class="card bg-base-100 shadow border border-base-200">
         <div class="card-body">
-          <h2 class="font-bold mb-3"><i class="fa-solid fa-boxes-stacked mr-2 text-primary"></i>Stok Menipis</h2>
+          <div class="flex justify-between items-center mb-3">
+            <h2 class="font-bold"><i class="fa-solid fa-boxes-stacked mr-2 text-primary"></i>Stok Menipis</h2>
+            <% if @low_stock_count.to_i > 5 %><span class="badge badge-warning badge-sm"><%= @low_stock_count %> total</span><% end %>
+          </div>
           <% if @low_stock.any? %>
             <div class="space-y-2">
               <% @low_stock.each do |p| %>
@@ -162,6 +165,9 @@
                   </div>
                   <span class="badge badge-warning badge-sm"><%= p.current_stock %> / <%= p.min_stock %></span>
                 </div>
+              <% end %>
+              <% if @low_stock_has_more %>
+                <a href="/products" class="btn btn-sm btn-ghost w-full gap-1">Lihat semua (<%= @low_stock_count %> barang) <i class="fa-solid fa-arrow-right text-xs"></i></a>
               <% end %>
             </div>
           <% else %>
