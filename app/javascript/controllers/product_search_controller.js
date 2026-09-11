@@ -3,9 +3,10 @@ import { Controller } from "@hotwired/stimulus"
 export default class extends Controller {
   static targets = ["input", "clear", "count", "item", "empty", "kategori"]
 
-  connect() { this.filter() }
+  connect() { if (this.hasInputTarget) this.filter() }
 
   filter() {
+    if (!this.hasInputTarget) return
     const q = (this.inputTarget.value || "").toLowerCase().trim()
     const kat = this.hasKategoriTarget ? this.kategoriTarget.value : ""
     let visible = 0
@@ -24,13 +25,13 @@ export default class extends Controller {
     }
     if (this.hasClearTarget) this.clearTarget.classList.toggle("hidden", !q && !kat)
     if (this.hasEmptyTarget) this.emptyTarget.classList.toggle("hidden", visible !== 0)
-    this.inputTarget.classList.toggle("input-warning", (q || kat) && visible === 0)
+    if (this.hasInputTarget) this.inputTarget.classList.toggle("input-warning", (q || kat) && visible === 0)
   }
 
   clear() {
-    this.inputTarget.value = ""
+    if (this.hasInputTarget) this.inputTarget.value = ""
     if (this.hasKategoriTarget) this.kategoriTarget.value = ""
     this.filter()
-    this.inputTarget.focus()
+    if (this.hasInputTarget) this.inputTarget.focus()
   }
 }
