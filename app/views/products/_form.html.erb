@@ -7,9 +7,17 @@
     <label class="form-control"><span class="label-text">Satuan</span><%= f.text_field :unit, class: "input input-bordered", placeholder: "Pcs" %></label>
     <label class="form-control"><span class="label-text">Harga Modal</span><%= f.number_field :cost_price, class: "input input-bordered" %></label>
     <label class="form-control"><span class="label-text">Harga Jual</span><%= f.number_field :selling_price, class: "input input-bordered" %></label>
-    <label class="form-control"><span class="label-text">Stok Awal</span><%= f.number_field :initial_stock, class: "input input-bordered" %></label>
-    <label class="form-control"><span class="label-text">Min Stok</span><%= f.number_field :min_stock, class: "input input-bordered" %></label>
+    <% if @product.new_record? %>
+      <label class="form-control"><span class="label-text">Stok</span><input type="number" name="product[current_stock]" value="<%= @product.current_stock %>" min="0" class="input input-bordered" placeholder="mis. 20" /></label>
+    <% end %>
+    <label class="form-control"><span class="label-text">Min Stok (peringatan menipis)</span><%= f.number_field :min_stock, class: "input input-bordered" %></label>
   </div>
+  <% unless @product.new_record? %>
+    <div class="alert bg-base-200 border-base-300 text-sm">
+      <i class="fa-solid fa-boxes-stacked text-primary"></i>
+      <span>Stok saat ini: <b><%= @product.current_stock %></b> &nbsp;·&nbsp; Untuk menambah stok, gunakan tombol <b>+ Stok</b> di Data Barang atau menu <b>Barang Masuk</b>.</span>
+    </div>
+  <% end %>
   <div class="flex gap-2">
     <button type="submit" class="btn btn-primary gap-2"><i class="fa-solid fa-check"></i> Simpan</button>
     <a href="/products" class="btn btn-ghost">Batal</a>

@@ -67,6 +67,10 @@ Rails.application.routes.draw do
       post :import
       get :template
     end
+    member do
+      post :add_stock
+      patch :adjust_stock
+    end
   end
   resources :stock_entries, only: [:index, :create, :destroy] do
     collection do

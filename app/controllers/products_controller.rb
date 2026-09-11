@@ -14,7 +14,7 @@ class ProductsController < ApplicationController
     package = Axlsx::Package.new
     wb = package.workbook
     wb.add_worksheet(name: "Data_Barang") do |sheet|
-      sheet.add_row %w[Kode_Barang Nama_Barang Kategori Satuan Harga_Modal Harga_Jual Stok_Awal Min_Stok]
+      sheet.add_row %w[Kode_Barang Nama_Barang Kategori Satuan Harga_Modal Harga_Jual Stok Min_Stok]
       sheet.add_row ["B-016", "Contoh Barang", "Alat Tulis", "Pcs", 5000, 7000, 20, 5]
       sheet.add_row ["B-017", "Contoh Minuman", "Minuman", "Botol", 3000, 5000, 30, 10]
     end
@@ -59,15 +59,18 @@ class ProductsController < ApplicationController
       end
       p = Product.find_or_initialize_by(code: code)
       is_new = p.new_record?
+      stok_val = (norm["stok"] || norm["stok_awal"] || norm["initial_stock"] || "0").to_i
+      is_new_for_stok = p.new_record?
       p.assign_attributes(
         name: name,
         category: (norm["kategori"] || norm["category"] || p.category || "Lain-lain").presence,
         unit: (norm["satuan"] || norm["unit"] || p.unit || "Pcs").presence,
         cost_price: (norm["harga_modal"] || norm["modal"] || p.cost_price || 0).to_s.delete(",.").to_i,
         selling_price: (norm["harga_jual"] || norm["jual"] || p.selling_price || 0).to_s.delete(",.").to_i,
-        initial_stock: (norm["stok_awal"] || norm["stok"] || norm["initial_stock"] || p.initial_stock || 0).to_i,
         min_stock: (norm["min_stok"] || norm["min"] || p.min_stock || 5).to_i
       )
+      # Stok diisi via initial_stock hanya untuk barang baru (barang lama atur via Tambah Stok)
+      p.initial_stock = stok_val if is_new_for_stok
       # handle numbers with commas: "3,000" -> 3000; to_i already handles stripped
       # Fix cost/selling if original had dots
       if p.save
@@ -91,9 +94,11 @@ class ProductsController < ApplicationController
   end
 
   def create
+    stok = params[:product].delete(:current_stock).to_i
     @product = Product.new(product_params)
+    @product.initial_stock = stok
     if @product.save
-      redirect_to products_path, notice: "Barang ditambahkan"
+      redirect_to products_path, notice: "Barang ditambahkan (stok #{stok})"
     else
       render :new, status: :unprocessable_entity
     end
@@ -128,9 +133,64 @@ class ProductsController < ApplicationController
     end
   end
 
+  def add_stock
+    @product = Product.find(params[:id])
+    qty = params[:quantity].to_i
+    if qty <= 0
+      redirect_to products_path, alert: "Jumlah stok harus > 0" and return
+    end
+    StockEntry.create!(
+      number: "STK-#{Time.current.strftime('%Y%m%d%H%M%S')}-#{@product.id}",
+      entry_date: Date.current,
+      supplier: params[:supplier].presence || "Tambah stok manual",
+      product: @product,
+      quantity: qty,
+      cost_price: @product.cost_price,
+      note: params[:note].presence || "Tambah stok dari Data Barang"
+    )
+    redirect_to products_path, notice: "Stok #{@product.name} +#{qty} berhasil"
+  end
+
+  def adjust_stock
+    @product = Product.find(params[:id])
+    target = params[:target_stock].to_i
+    if target < 0
+      redirect_to products_path, alert: "Stok tidak boleh negatif" and return
+    end
+    current = @product.current_stock
+    diff = target - current
+    if diff == 0
+      redirect_to products_path, notice: "Stok #{@product.name} tetap #{current}" and return
+    end
+    if diff > 0
+      StockEntry.create!(
+        number: "ADJ-#{Time.current.strftime('%Y%m%d%H%M%S')}-#{@product.id}",
+        entry_date: Date.current,
+        supplier: "Penyesuaian stok",
+        product: @product,
+        quantity: diff,
+        cost_price: @product.cost_price,
+        note: params[:note].presence || "Penyesuaian: #{current} → #{target} (+#{diff})"
+      )
+    else
+      # Kurangi stok: simpan sebagai StockEntry negatif via catatan + kurangi initial_stock jika perlu
+      # Paling simpel: catat penyesuaian negatif sebagai StockEntry dengan quantity negatif (izinkan khusus adjust)
+      StockEntry.create!(
+        number: "ADJ-#{Time.current.strftime('%Y%m%d%H%M%S')}-#{@product.id}",
+        entry_date: Date.current,
+        supplier: "Penyesuaian stok",
+        product: @product,
+        quantity: diff,
+        cost_price: @product.cost_price,
+        note: params[:note].presence || "Penyesuaian: #{current} → #{target} (#{diff})"
+      )
+    end
+    redirect_to products_path, notice: "Stok #{@product.name}: #{current} → #{target} berhasil"
+  end
+
   private
 
   def product_params
-    params.require(:product).permit(:code, :name, :category, :unit, :cost_price, :selling_price, :initial_stock, :min_stock)
+    params.require(:product).permit(:code, :name, :category, :unit, :cost_price, :selling_price, :min_stock)
   end
 end

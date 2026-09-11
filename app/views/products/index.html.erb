@@ -53,7 +53,40 @@
                     <span class="badge badge-success badge-sm gap-1"><i class="fa-solid fa-circle-check text-[10px]"></i> Aman</span>
                   <% end %>
                 </td>
-                <td class="flex gap-1">
+                <td class="flex gap-1 items-center">
+                  <button onclick="document.getElementById('stok-<%= p.id %>').showModal()" class="btn btn-success btn-xs gap-1"><i class="fa-solid fa-plus text-[10px]"></i> Stok</button>
+                  <dialog id="stok-<%= p.id %>" class="modal">
+                    <div class="modal-box max-w-md">
+                      <h3 class="font-bold">Kelola Stok — <%= p.name %></h3>
+                      <p class="text-xs opacity-60 mt-1">Stok sekarang: <b><%= _stok %></b> · Kode: <%= p.code %></p>
+                      <div role="tablist" class="tabs tabs-boxed tabs-sm mt-4">
+                        <a role="tab" class="tab tab-active" onclick="this.closest('.modal-box').querySelector('#tab-tambah-<%= p.id %>').classList.remove('hidden'); this.closest('.modal-box').querySelector('#tab-atur-<%= p.id %>').classList.add('hidden'); this.parentElement.querySelectorAll('.tab').forEach(t=>t.classList.remove('tab-active')); this.classList.add('tab-active')">Tambah</a>
+                        <a role="tab" class="tab" onclick="this.closest('.modal-box').querySelector('#tab-atur-<%= p.id %>').classList.remove('hidden'); this.closest('.modal-box').querySelector('#tab-tambah-<%= p.id %>').classList.add('hidden'); this.parentElement.querySelectorAll('.tab').forEach(t=>t.classList.remove('tab-active')); this.classList.add('tab-active')">Atur jadi</a>
+                      </div>
+                      <div id="tab-tambah-<%= p.id %>" class="mt-3">
+                        <%= form_with url: add_stock_product_path(p), method: :post, class: "space-y-3" do |f| %>
+                          <label class="form-control"><span class="label-text">Jumlah tambah *</span><input type="number" name="quantity" min="1" required placeholder="mis. 10" class="input input-bordered" /></label>
+                          <label class="form-control"><span class="label-text">Catatan (opsional)</span><input type="text" name="note" placeholder="mis. beli dari Toko ATK" class="input input-bordered" /></label>
+                          <div class="modal-action">
+                            <button type="button" onclick="this.closest('dialog').close()" class="btn btn-ghost">Batal</button>
+                            <button type="submit" class="btn btn-primary gap-2"><i class="fa-solid fa-plus"></i> Tambah</button>
+                          </div>
+                        <% end %>
+                      </div>
+                      <div id="tab-atur-<%= p.id %>" class="hidden mt-3">
+                        <%= form_with url: adjust_stock_product_path(p), method: :patch, class: "space-y-3" do |f| %>
+                          <label class="form-control"><span class="label-text">Stok jadi *</span><input type="number" name="target_stock" min="0" required value="<%= _stok %>" class="input input-bordered" /></label>
+                          <p class="text-xs opacity-60">Untuk koreksi/stok opname. Contoh: sekarang <%= _stok %>, isi jadi 50 → akan +<%= 50-_stok %> atau -<%= _stok-50 %> otomatis.</p>
+                          <label class="form-control"><span class="label-text">Catatan (opsional)</span><input type="text" name="note" placeholder="mis. stok opname 2026-09-03" class="input input-bordered" /></label>
+                          <div class="modal-action">
+                            <button type="button" onclick="this.closest('dialog').close()" class="btn btn-ghost">Batal</button>
+                            <button type="submit" class="btn btn-warning gap-2"><i class="fa-solid fa-pen"></i> Atur</button>
+                          </div>
+                        <% end %>
+                      </div>
+                    </div>
+                    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+                  </dialog>
                   <a href="/products/<%= p.id %>/edit" class="btn btn-ghost btn-xs">Edit</a>
                   <%= button_to product_path(p), method: :delete, form: { data: { turbo_confirm: "Hapus #{p.name}? Tidak bisa kalau masih ada penjualan/pesanan yang pakai barang ini." } }, class: "btn btn-ghost btn-xs text-error" do %><i class="fa-solid fa-trash"></i><% end %>
                 </td>
@@ -67,6 +100,6 @@
   </div>
   <div class="mt-3 flex items-start gap-2 text-xs text-base-content/50 bg-base-100 border border-base-200 rounded-lg p-3">
     <i class="fa-solid fa-circle-info mt-0.5 text-primary"></i>
-    <div><b>Sisa Stok</b> = <span class="badge badge-ghost badge-xs">Stok Awal</span> + <span class="text-success font-bold">Masuk</span> − <span class="text-error font-bold">Terjual</span> &nbsp;·&nbsp; Otomatis berkurang tiap transaksi <b>Kasir</b> tersimpan, dan ditahan kalau jual melebihi sisa.</div>
+    <div><b>Stok</b> = sisa yang bisa dijual &nbsp;·&nbsp; Tambah lewat tombol <b>+ Stok</b> di tiap baris (otomatis tercatat di <b>Barang Masuk</b>), berkurang otomatis tiap transaksi <b>Kasir</b>.</div>
   </div>
 </div>
