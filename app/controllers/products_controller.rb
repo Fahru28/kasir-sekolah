@@ -1,6 +1,13 @@
 class ProductsController < ApplicationController
   def index
     @products = Product.with_stock_fast.order(:name)
+    if params[:q].present?
+      q = "%#{params[:q].strip}%"
+      @products = @products.where("products.code ILIKE :q OR products.name ILIKE :q OR products.category ILIKE :q", q: q)
+    end
+    if params[:kategori].present? && params[:kategori] != "Semua"
+      @products = @products.where(category: params[:kategori])
+    end
   end
 
   def template
